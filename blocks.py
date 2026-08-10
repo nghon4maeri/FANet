@@ -79,9 +79,9 @@ class MixPool(nn.Module):
         )
 
     def forward(self, x, m):
-        fmask = (self.fmask(x) > 0.5).type(torch.cuda.FloatTensor)
+        fmask = (self.fmask(x) > 0.5).float()
         m = nn.MaxPool2d((m.shape[2]//x.shape[2], m.shape[3]//x.shape[3]))(m)
-        x1 = x * torch.logical_or(fmask, m).type(torch.cuda.FloatTensor)
+        x1 = x * torch.logical_or(fmask > 0, m > 0).float()
         x1 = self.conv1(x1)
         x2 = self.conv2(x)
         x = torch.cat([x1, x2], axis=1)
