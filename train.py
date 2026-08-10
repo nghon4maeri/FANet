@@ -170,7 +170,7 @@ if __name__ == "__main__":
     checkpoint_path = "files/checkpoint.pth"
 
     """ Dataset """
-    path = "../Kvasir-SEG"
+    path = "./sessile-main-Kvasir-SEG"
     (train_x, train_y), (valid_x, valid_y) = load_data(path)
     train_x, train_y = shuffling(train_x, train_y)
 
@@ -196,24 +196,24 @@ if __name__ == "__main__":
         dataset=train_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=2
+        num_workers=0
     )
 
     valid_loader = DataLoader(
         dataset=valid_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=2
+        num_workers=0
     )
 
     """ Model """
-    device = torch.device('cuda')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = FANet()
     # model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
     loss_fn = DiceBCELoss()
     loss_name = "BCE Dice Loss"
 
