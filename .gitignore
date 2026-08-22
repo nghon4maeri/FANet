@@ -1,3 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Data & artifacts
+data/
+checkpoints/
+results/
 *.pth
-__pycache__/**/*
-report/**/*
+
+# Notebooks (keep cell outputs out of git)
+notebooks/.ipynb_checkpoints/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store

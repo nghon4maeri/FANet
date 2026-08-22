@@ -1,0 +1,24 @@
+# FANet default experiment config (Kvasir-SEG sessile subset)
+dataset:
+  root: data/sessile-main-Kvasir-SEG
+  image_size: [256, 256]
+
+train:
+  batch_size: 2
+  epochs: 500
+  lr: 0.0001
+  seed: 42
+  augmentation:
+    rotate_limit: 35
+    rotate_p: 0.3
+    hflip_p: 0.3
+    vflip_p: 0.3
+    dropout_p: 0.3
+
+eval:
+  num_iter: 10
+
+paths:
+  checkpoint: checkpoints/checkpoint.pth
+  train_log: logs/train_log.txt
+  results: results
