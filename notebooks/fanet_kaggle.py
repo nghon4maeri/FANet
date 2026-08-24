@@ -36,8 +36,11 @@ if torch.cuda.is_available():
 
 # %%
 CANDIDATES = [
-    "/kaggle/input/datasets/namnguynnnn/kvasir/kvasir-seg/Kvasir-SEG",
-    "/kaggle/input/datasets/namnguynnnn/kvasir/kvasir-sessile/sessile-main-Kvasir-SEG",
+    "/kaggle/input/kvasir-seg",
+    "/kaggle/input/kvasir-sessile",
+    "/kaggle/input/cvc-clinicdb",
+    "/kaggle/input/chase-db1",
+    "/kaggle/input/drive-vessel",
 ]
 
 SRC_PATH = None
@@ -55,8 +58,8 @@ if SRC_PATH is None:
 assert SRC_PATH is not None, "Dataset not found. Add Kvasir-SEG via Kaggle Data panel."
 print(f"Source: {SRC_PATH}")
 
-n_img = len([f for f in os.listdir(f"{SRC_PATH}/images") if f.endswith('.jpg')])
-n_msk = len([f for f in os.listdir(f"{SRC_PATH}/masks") if f.endswith('.jpg')])
+n_img = len([f for f in os.listdir(f"{SRC_PATH}/images") if f.lower().endswith(('.jpg', '.jpeg', '.png', '.tif', '.tiff'))])
+n_msk = len([f for f in os.listdir(f"{SRC_PATH}/masks") if f.lower().endswith(('.jpg', '.jpeg', '.png', '.tif', '.tiff'))])
 print(f"Images: {n_img}, Masks: {n_msk}")
 
 # /kaggle/input is read-only -> copy to /kaggle/working/
@@ -67,7 +70,7 @@ if not os.path.exists(DATASET_PATH):
 
 # Generate train.txt / val.txt
 if not os.path.exists(f"{DATASET_PATH}/train.txt"):
-    names = sorted([f.replace('.jpg', '') for f in os.listdir(f"{DATASET_PATH}/images") if f.endswith('.jpg')])
+    names = sorted([os.path.splitext(f)[0] for f in os.listdir(f"{DATASET_PATH}/images") if f.lower().endswith(('.jpg', '.jpeg', '.png', '.tif', '.tiff'))])
     np.random.seed(42); np.random.shuffle(names)
     split = int(len(names) * 0.8)
     with open(f"{DATASET_PATH}/train.txt", 'w') as f:
@@ -277,12 +280,17 @@ def init_mask(image_paths, size=(256, 256)):
 
 
 def load_data(path):
-    """Read train.txt / val.txt -> (images[], masks[])."""
+    """Read train.txt / val.txt -> (images[], masks[]). Supports jpg/png/tif."""
     def _load(p, fname):
         with open(f"{p}/{fname}") as f:
             data = f.read().split("\n")[:-1]
-        imgs = [os.path.join(p, "images", n + ".jpg") for n in data]
-        msks = [os.path.join(p, "masks", n + ".jpg") for n in data]
+        imgs, msks = [], []
+        for n in data:
+            for ext in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
+                if os.path.exists(os.path.join(p, "images", n + ext)):
+                    imgs.append(os.path.join(p, "images", n + ext))
+                    msks.append(os.path.join(p, "masks", n + ext))
+                    break
         return imgs, msks
     return _load(path, "train.txt"), _load(path, "val.txt")
 
