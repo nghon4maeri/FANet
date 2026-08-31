@@ -55,8 +55,23 @@ class ResidualBlock(nn.Module):
 
 """ Mixpool block: Merging the image features and the mask """
 class MixPool(nn.Module):
-    def __init__(self, in_c, out_c):
+    """MixPool with configurable gating.
+
+    gate:
+        "binary" - hard threshold (original FANet, zero gradient to fmask)
+        "ste"    - hard forward + straight-through gradient to fmask
+        "soft"   - soft gating max(fmask, m_fg), full gradient
+    dual_path:
+        False - mask m is [B,1,H,W] foreground only
+        True  - mask m is [B,2,H,W] = [m_fg, m_bg]; confident background
+                suppresses activation (kept = keep * (1 - m_bg))
+    """
+    def __init__(self, in_c, out_c, gate="binary", dual_path=False):
         super(MixPool, self).__init__()
+
+        assert gate in ("binary", "ste", "soft"), f"unknown gate {gate}"
+        self.gate = gate
+        self.dual_path = dual_path
 
         self.fmask = nn.Sequential(
             nn.Conv2d(in_c, out_c, kernel_size=3, padding=1),
@@ -79,9 +94,24 @@ class MixPool(nn.Module):
         )
 
     def forward(self, x, m):
-        fmask = (self.fmask(x) > 0.5).float()
+        fmask = self.fmask(x)  # soft attention, differentiable
+
         m = nn.MaxPool2d((m.shape[2]//x.shape[2], m.shape[3]//x.shape[3]))(m)
-        x1 = x * torch.logical_or(fmask > 0, m > 0).float()
+        m_fg = m[:, 0:1]
+        m_bg = m[:, 1:2] if (self.dual_path and m.shape[1] > 1) else torch.zeros_like(m_fg)
+
+        if self.gate == "binary":
+            fmask_g = (fmask > 0.5).float()
+        elif self.gate == "ste":
+            fmask_g = (fmask > 0.5).float() + fmask - fmask.detach()
+        else:  # soft
+            fmask_g = fmask
+
+        keep = torch.maximum(fmask_g, m_fg)              # fg path (OR semantics)
+        if self.dual_path:
+            keep = keep * (1.0 - m_bg)                   # bg suppression
+
+        x1 = x * keep
         x1 = self.conv1(x1)
         x2 = self.conv2(x)
         x = torch.cat([x1, x2], axis=1)

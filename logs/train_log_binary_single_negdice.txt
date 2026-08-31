@@ -1,0 +1,17 @@
+2026-08-31 14:26:05.495755
+Dataset Size:
+Train: 156 - Valid: 40
+
+Hyperparameters:
+Image Size: (256, 256)
+Batch Size: 2
+LR: 0.0001
+Epochs: 1
+Optimizer: Adam
+Loss: NegativeAreaDiceBCE (fallback F1)
+
+Saving checkpoint: checkpoints/checkpoint_binary_single_negdice.pth
+Epoch: 01 | Epoch Time: 1m 45s
+	Train Loss: 1.253
+	 Val. Loss: 1.219
+

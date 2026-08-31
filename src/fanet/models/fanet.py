@@ -3,13 +3,13 @@ import torch.nn as nn
 from .blocks import ResidualBlock, MixPool
 
 class EncoderBlock(nn.Module):
-    def __init__(self, in_c, out_c, name=None):
+    def __init__(self, in_c, out_c, gate="binary", dual_path=False, name=None):
         super(EncoderBlock, self).__init__()
 
         self.name = name
         self.r1 = ResidualBlock(in_c, out_c)
         self.r2 = ResidualBlock(out_c, out_c)
-        self.p1 = MixPool(out_c, out_c)
+        self.p1 = MixPool(out_c, out_c, gate=gate, dual_path=dual_path)
         self.pool = nn.MaxPool2d((2, 2))
 
     def forward(self, inputs, masks):
@@ -20,13 +20,13 @@ class EncoderBlock(nn.Module):
         return o, x
 
 class DecoderBlock(nn.Module):
-    def __init__(self, in_c, out_c, name=None):
+    def __init__(self, in_c, out_c, gate="binary", dual_path=False, name=None):
         super(DecoderBlock, self).__init__()
 
         self.upsample = nn.ConvTranspose2d(in_c, in_c, kernel_size=4, stride=2, padding=1)
         self.r1 = ResidualBlock(in_c+in_c, out_c)
         self.r2 = ResidualBlock(out_c, out_c)
-        self.p1 = MixPool(out_c, out_c)
+        self.p1 = MixPool(out_c, out_c, gate=gate, dual_path=dual_path)
 
     def forward(self, inputs, skip, masks):
         x = self.upsample(inputs)
@@ -37,19 +37,28 @@ class DecoderBlock(nn.Module):
         return p
 
 class FANet(nn.Module):
-    def __init__(self):
+    """FANet with configurable MixPool gating.
+
+    gate: "binary" (original) | "ste" | "soft"
+    dual_path: False (mask [B,1,H,W]) | True (mask [B,2,H,W] = [m_fg, m_bg])
+    """
+    def __init__(self, gate="binary", dual_path=False):
         super(FANet, self).__init__()
 
-        self.e1 = EncoderBlock(3, 32)
-        self.e2 = EncoderBlock(32, 64)
-        self.e3 = EncoderBlock(64, 128)
-        self.e4 = EncoderBlock(128, 256)
+        self.gate = gate
+        self.dual_path = dual_path
 
-        self.d1 = DecoderBlock(256, 128)
-        self.d2 = DecoderBlock(128, 64)
-        self.d3 = DecoderBlock(64, 32)
-        self.d4 = DecoderBlock(32, 16)
+        self.e1 = EncoderBlock(3, 32, gate=gate, dual_path=dual_path)
+        self.e2 = EncoderBlock(32, 64, gate=gate, dual_path=dual_path)
+        self.e3 = EncoderBlock(64, 128, gate=gate, dual_path=dual_path)
+        self.e4 = EncoderBlock(128, 256, gate=gate, dual_path=dual_path)
 
+        self.d1 = DecoderBlock(256, 128, gate=gate, dual_path=dual_path)
+        self.d2 = DecoderBlock(128, 64, gate=gate, dual_path=dual_path)
+        self.d3 = DecoderBlock(64, 32, gate=gate, dual_path=dual_path)
+        self.d4 = DecoderBlock(32, 16, gate=gate, dual_path=dual_path)
+
+        # Output head giữ nguyên 17 kênh: concat chỉ với m_fg (kênh 0)
         self.output = nn.Conv2d(16+1, 1, kernel_size=1, padding=0)
 
     def forward(self, x):
@@ -65,14 +74,20 @@ class FANet(nn.Module):
         d3 = self.d3(d2, s2, masks)
         d4 = self.d4(d3, s1, masks)
 
-        d5 = torch.cat([d4, masks], axis=1)
+        m_fg = masks[:, 0:1]
+        d5 = torch.cat([d4, m_fg], axis=1)
         output = self.output(d5)
 
         return output
 
 if __name__ == "__main__":
-    x = torch.randn((2, 3, 256, 256)).cuda()
-    m = torch.randn((2, 1, 256, 256)).cuda()
-    model = FANet().cuda()
+    x = torch.randn((2, 3, 256, 256))
+    m = torch.randn((2, 1, 256, 256))
+    model = FANet()
     y = model([x, m])
-    print(y.shape)
+    print("single-path:", y.shape)
+
+    m2 = torch.randn((2, 2, 256, 256))
+    model2 = FANet(gate="ste", dual_path=True)
+    y2 = model2([x, m2])
+    print("dual-path ste:", y2.shape)

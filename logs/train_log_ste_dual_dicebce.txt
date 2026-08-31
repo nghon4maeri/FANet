@@ -1,0 +1,17 @@
+2026-08-31 19:09:20.571734
+Dataset Size:
+Train: 156 - Valid: 40
+
+Hyperparameters:
+Image Size: (256, 256)
+Batch Size: 2
+LR: 0.0001
+Epochs: 1
+Optimizer: Adam
+Loss: BCE Dice Loss
+
+Saving checkpoint: checkpoints/checkpoint_ste_dual_dicebce.pth
+Epoch: 01 | Epoch Time: 1m 53s
+	Train Loss: 0.794
+	 Val. Loss: 0.769
+

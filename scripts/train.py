@@ -8,6 +8,7 @@ import datetime
 import os
 import time
 
+import numpy as np
 import albumentations as A
 import torch
 from torch.utils.data import DataLoader
@@ -22,7 +23,7 @@ from fanet.utils import (
 )
 
 
-def train(model, loader, mask, optimizer, loss_fn, device, size):
+def train(model, loader, mask, optimizer, loss_fn, device, size, dual_path=False):
     epoch_loss = 0
     return_mask = []
 
@@ -32,7 +33,11 @@ def train(model, loader, mask, optimizer, loss_fn, device, size):
         y = y.to(device, dtype=torch.float32)
 
         b = y.shape[0]
-        m = rle_batch_to_tensor(mask, i * b, b, size).to(device)
+        m = rle_batch_to_tensor(mask, i * b, b, size)
+        if dual_path:
+            bg = (1.0 - m)
+            m = torch.cat([m, bg], dim=1)
+        m = m.to(device)
 
         optimizer.zero_grad()
         y_pred = model([x, m])
@@ -53,7 +58,7 @@ def train(model, loader, mask, optimizer, loss_fn, device, size):
     return epoch_loss / len(loader), return_mask
 
 
-def evaluate(model, loader, mask, loss_fn, device, size):
+def evaluate(model, loader, mask, loss_fn, device, size, dual_path=False):
     epoch_loss = 0
     return_mask = []
 
@@ -64,7 +69,11 @@ def evaluate(model, loader, mask, loss_fn, device, size):
             y = y.to(device, dtype=torch.float32)
 
             b = y.shape[0]
-            m = rle_batch_to_tensor(mask, i * b, b, size).to(device)
+            m = rle_batch_to_tensor(mask, i * b, b, size)
+            if dual_path:
+                bg = (1.0 - m)
+                m = torch.cat([m, bg], dim=1)
+            m = m.to(device)
 
             y_pred = model([x, m])
             loss = loss_fn(y_pred, y)
@@ -85,16 +94,34 @@ def main():
     parser.add_argument("--config", type=str, default="configs/kvasir_sessile.yaml")
     parser.add_argument("--resume", type=str, default=None,
                         help="checkpoint path to resume from")
+    parser.add_argument("--gate", type=str, default="binary",
+                        choices=["binary", "ste", "soft"],
+                        help="MixPool gate mode (Phase 2/4)")
+    parser.add_argument("--dual-path", action="store_true",
+                        help="dual-path feedback [m_fg, m_bg] (Phase 3/4)")
+    parser.add_argument("--epochs", type=int, default=None,
+                        help="override num epochs (smoke test)")
+    parser.add_argument("--loss", type=str, default="dicebce",
+                        choices=["dicebce", "negdice"],
+                        help="loss fn (fallback F1: negdice = negative-area Dice)")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
     size = tuple(cfg["dataset"]["image_size"])
     batch_size = cfg["train"]["batch_size"]
-    num_epochs = cfg["train"]["epochs"]
+    num_epochs = args.epochs or cfg["train"]["epochs"]
     lr = cfg["train"]["lr"]
     checkpoint_path = cfg["paths"]["checkpoint"]
     train_log_path = cfg["paths"]["train_log"]
     aug = cfg["train"]["augmentation"]
+    gate = args.gate
+    dual_path = args.dual_path
+
+    if gate != "binary" or dual_path or args.loss != "dicebce":
+        base, ext = os.path.splitext(checkpoint_path)
+        checkpoint_path = f"{base}_{gate}_{'dual' if dual_path else 'single'}_{args.loss}{ext}"
+        train_log_path = (f"{os.path.splitext(train_log_path)[0]}_{gate}_"
+                          f"{'dual' if dual_path else 'single'}_{args.loss}.txt")
 
     seeding(cfg["train"]["seed"])
 
@@ -112,7 +139,8 @@ def main():
         A.Rotate(limit=aug["rotate_limit"], p=aug["rotate_p"]),
         A.HorizontalFlip(p=aug["hflip_p"]),
         A.VerticalFlip(p=aug["vflip_p"]),
-        A.CoarseDropout(p=aug["dropout_p"], max_holes=10, max_height=32, max_width=32),
+        A.CoarseDropout(p=aug["dropout_p"], num_holes=10,
+                        hole_height=32, hole_width=32),
     ])
 
     train_dataset = DATASET(train_x, train_y, size, transform=transform)
@@ -124,18 +152,24 @@ def main():
                               shuffle=False, num_workers=0)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = FANet().to(device)
+    model = FANet(gate=gate, dual_path=dual_path).to(device)
     if args.resume is not None:
         model.load_state_dict(torch.load(args.resume, map_location=device))
         print_and_save(train_log_path, f"Resumed from {args.resume}")
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
-    loss_fn = DiceBCELoss()
+    if args.loss == "negdice":
+        from fanet.losses import NegativeAreaDiceBCELoss
+        loss_fn = NegativeAreaDiceBCELoss(fp_weight=0.5)
+        loss_name = "NegativeAreaDiceBCE (fallback F1)"
+    else:
+        loss_fn = DiceBCELoss()
+        loss_name = "BCE Dice Loss"
 
     print_and_save(train_log_path,
                    f"Hyperparameters:\nImage Size: {size}\nBatch Size: {batch_size}"
-                   f"\nLR: {lr}\nEpochs: {num_epochs}\nOptimizer: Adam\nLoss: BCE Dice Loss\n")
+                   f"\nLR: {lr}\nEpochs: {num_epochs}\nOptimizer: Adam\nLoss: {loss_name}\n")
 
     best_valid_loss = float('inf')
     train_mask = init_mask(train_x, size)
@@ -145,9 +179,9 @@ def main():
         start_time = time.time()
 
         train_loss, return_train_mask = train(
-            model, train_loader, train_mask, optimizer, loss_fn, device, size)
+            model, train_loader, train_mask, optimizer, loss_fn, device, size, dual_path)
         valid_loss, return_valid_mask = evaluate(
-            model, valid_loader, valid_mask, loss_fn, device, size)
+            model, valid_loader, valid_mask, loss_fn, device, size, dual_path)
         scheduler.step(valid_loss)
 
         if valid_loss < best_valid_loss:
