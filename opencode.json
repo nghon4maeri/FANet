@@ -1,0 +1,43 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/pytorch-lightning",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/scikit-learn",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/statistical-analysis",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/matplotlib",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/seaborn",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/scientific-visualization",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/optimize-for-gpu",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/get-available-resources",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/pathml",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/histolab",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/pydicom",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/scientific-writing",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/literature-review",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/paper-lookup",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/research-lookup",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/bgpt-paper-search",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/citation-management",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/peer-review",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/markdown-mermaid-writing",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/docx",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/pptx",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/scientific-slides",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/venue-templates",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/latex-posters",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/exploratory-data-analysis",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/hypothesis-generation",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/experimental-design",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/exa-search",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/parallel-web",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/hugging-science",
+      "C:/Users/nghoo/.config/opencode/external/scientific-agent-skills/skills/markitdown"
+    ]
+  },
+  "permission": {
+    "external_directory": {
+      "C:/Users/nghoo/.config/opencode/external/**": "allow"
+    }
+  }
+}
