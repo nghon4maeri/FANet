@@ -15,9 +15,14 @@
 
 - Mỗi phase nghiên cứu: viết report theo `docs/reports/_TEMPLATE.md`,
   cập nhật index `docs/reports/README.md` (timeline + experiment tracking).
-- Dùng scientific agent skills khi được yêu cầu (literature-review,
-  paper-lookup, citation-management, hypothesis-generation,
+- Khi research (tìm paper, phân tích literature, xác định research gap):
+  BẮT BUỘC dùng scientific agent research skills để hỗ trợ —
+  literature-review, paper-lookup, citation-management, exa-search,
+  research-lookup, bgpt-paper-search, hypothesis-generation,
   experimental-design, statistical-analysis, scientific-visualization,
-  markdown-mermaid-writing, ...).
+  markdown-mermaid-writing, ... Tìm paper qua NHIỀU nguồn (OpenAlex,
+  Semantic Scholar, arXiv, PubMed/Europe PMC), lưu citation đầy đủ
+  (title/venue/năm/DOI) vào `docs/literature_grounding_*.md`, và phân tích
+  research gap có đối chiếu bằng chứng thực nghiệm của project.
 - Phân biệt bằng chứng: TRAIN (đáng tin) vs FROZEN EVAL (chỉ là khả năng
   khai thác feedback của model cũ) vs INVALID (bug) khi viết kết luận.
