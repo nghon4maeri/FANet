@@ -1,0 +1,197 @@
+{
+  "PraNet_MICCAI2020.pdf": {
+    "status": "ok",
+    "size": 582841,
+    "src": "https://arxiv.org/pdf/2006.11392"
+  },
+  "PolypPVT_arXiv2021.pdf": {
+    "status": "ok",
+    "size": 1555644,
+    "src": "https://arxiv.org/pdf/2108.06932"
+  },
+  "MSRFNet_JBHI2021.pdf": {
+    "status": "ok",
+    "size": 11474970,
+    "src": "https://arxiv.org/pdf/2105.07451"
+  },
+  "CaraNet_arXiv2021.pdf": {
+    "status": "ok",
+    "size": 29661470,
+    "src": "https://arxiv.org/pdf/2108.07353"
+  },
+  "SANet_MICCAI2021.pdf": {
+    "status": "ok",
+    "size": 1766208,
+    "src": "https://arxiv.org/pdf/2106.05597"
+  },
+  "F3Net_AAAI2020.pdf": {
+    "status": "ok",
+    "size": 1713867,
+    "src": "https://arxiv.org/pdf/2007.06272"
+  },
+  "HRINet_AAAI2023.pdf": {
+    "status": "ok",
+    "size": 528665,
+    "src": "https://arxiv.org/pdf/2209.03418"
+  },
+  "LovaszSoftmax_CVPR2018.pdf": {
+    "status": "ok",
+    "size": 4169265,
+    "src": "https://arxiv.org/pdf/1705.08790"
+  },
+  "BoundaryLoss_MICCAI2019.pdf": {
+    "status": "ok",
+    "size": 1724858,
+    "src": "https://arxiv.org/pdf/1812.00590"
+  },
+  "TverskyLoss_TMI2017.pdf": {
+    "status": "ok",
+    "size": 7777393,
+    "src": "https://arxiv.org/pdf/1706.05721"
+  },
+  "clDice_CVPR2021.pdf": {
+    "status": "ok",
+    "size": 6744504,
+    "src": "https://arxiv.org/pdf/2003.07311"
+  },
+  "OHEM_CVPR2016.pdf": {
+    "status": "ok",
+    "size": 965877,
+    "src": "https://arxiv.org/pdf/1604.03540"
+  },
+  "DistanceTransform_MIDL2020.pdf": {
+    "status": "ok",
+    "size": 2438925,
+    "src": "https://arxiv.org/pdf/1912.13403"
+  },
+  "HausdorffLoss_TMI2020.pdf": {
+    "status": "ok",
+    "size": 3056702,
+    "src": "https://arxiv.org/pdf/1904.10030"
+  },
+  "Bengio_STE2013.pdf": {
+    "status": "ok",
+    "size": 403557,
+    "src": "https://arxiv.org/pdf/1308.3432"
+  },
+  "GumbelSoftmax_arXiv2016.pdf": {
+    "status": "ok",
+    "size": 1403159,
+    "src": "https://arxiv.org/pdf/1611.01144"
+  },
+  "STARCaps_arXiv2019.pdf": {
+    "status": "ok",
+    "size": 751405,
+    "src": "https://arxiv.org/pdf/1909.11974"
+  },
+  "Tent_ICLR2021.pdf": {
+    "status": "ok",
+    "size": 6448675,
+    "src": "https://arxiv.org/pdf/2006.10726"
+  },
+  "CoTTA_CVPR2022.pdf": {
+    "status": "ok",
+    "size": 730640,
+    "src": "https://arxiv.org/pdf/2203.13591"
+  },
+  "SINet_CVPR2020.pdf": {
+    "status": "ok",
+    "size": 5385578,
+    "src": "https://arxiv.org/pdf/2008.11622"
+  },
+  "ZoomNet_CVPR2022.pdf": {
+    "status": "ok",
+    "size": 14504736,
+    "src": "https://arxiv.org/pdf/2203.02688"
+  },
+  "NegativeAreaDice_IEEEAccess2020.pdf": {
+    "status": "fail",
+    "src": "https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=9199415",
+    "err": "HTTP Error 420: "
+  },
+  "FEGNet_JBHI2023.pdf": {
+    "status": "no-oa",
+    "doi": "10.1109/jbhi.2023.3272168",
+    "landing": ""
+  },
+  "ContextFeedbackLoop_TMI2021.pdf": {
+    "status": "ok",
+    "size": 702285,
+    "src": "http://arxiv.org/pdf/2103.02844"
+  },
+  "FANetv2_ICASSP2025.pdf": {
+    "status": "ok",
+    "size": 911810,
+    "src": "https://arxiv.org/pdf/2409.05875"
+  },
+  "RefineUNet_PRLetter2020.pdf": {
+    "status": "no-oa",
+    "doi": "10.1016/j.patrec.2020.07.013",
+    "landing": ""
+  },
+  "PredictiveCodingPolyp_RS2026.pdf": {
+    "status": "ok",
+    "size": 3189423,
+    "src": "https://www.researchsquare.com/article/rs-9145958/v1.pdf"
+  },
+  "CFANet_PatternRec2023.pdf": {
+    "status": "no-oa",
+    "doi": "10.1016/j.patcog.2023.109555",
+    "landing": ""
+  },
+  "ColonFormer_IEEEAccess2022.pdf": {
+    "status": "fail",
+    "src": "https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=9848424",
+    "err": "HTTP Error 420: "
+  },
+  "BCNet_JBHI2022.pdf": {
+    "status": "no-oa",
+    "doi": "10.1109/jbhi.2022.3173948",
+    "landing": ""
+  },
+  "PolypSegSurvey_JImaging2025.pdf": {
+    "status": "ok",
+    "size": 1587769,
+    "src": "https://mdpi-res.com/d_attachment/jimaging/jimaging-11-00293/article_deploy/jimaging-11-00293.pdf"
+  },
+  "TTASurvey_IJCV2024.pdf": {
+    "status": "ok",
+    "size": 1480626,
+    "src": "https://arxiv.org/pdf/2303.15361"
+  },
+  "CTNet_TCyber2024.pdf": {
+    "status": "no-oa",
+    "doi": "10.1109/tcyb.2024.3368154",
+    "landing": ""
+  },
+  "BUANet_NeuralNet2023.pdf": {
+    "status": "no-oa",
+    "doi": "10.1016/j.neunet.2023.11.050",
+    "landing": ""
+  },
+  "MEGANet_WACV2024.pdf": {
+    "status": "ok",
+    "size": 13561320,
+    "src": "https://arxiv.org/pdf/2309.03329"
+  },
+  "ActiveBoundaryLoss_AAAI2022.pdf": {
+    "status": "ok",
+    "size": 9734106,
+    "src": "https://arxiv.org/pdf/2102.02696"
+  },
+  "ConditionalBoundaryLoss_TIP2023.pdf": {
+    "status": "no-oa",
+    "doi": "10.1109/tip.2023.3290519",
+    "landing": ""
+  },
+  "PseudoLabelConsistency_SciRep2022.pdf": {
+    "status": "fail",
+    "src": "pmc-static",
+    "err": "not a PDF"
+  },
+  "MetricsReloaded_NatMethods2024.pdf": {
+    "status": "ok",
+    "size": 7919522,
+    "src": "https://pure.uva.nl/ws/files/233417994/s41592-023-02151-z.pdf"
+  }
+}

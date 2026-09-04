@@ -14,6 +14,7 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | 6 | [2026-08-31_phase2-3-ablation.md](2026-08-31_phase2-3-ablation.md) | 31/08/2026 | Phase 2+3: literature + hypotheses + ablation 2x2 (STE hồi sinh fmask, dual-path); P_B1 bác bỏ, P_A1 xác nhận |
 | 7 | [2026-08-31_phase4-train-end-to-end.md](2026-08-31_phase4-train-end-to-end.md) | 31/08/2026 | Phase 4: code train 4 cells sẵn sàng + smoke-test CPU + fallback loss; chờ chạy Kaggle T4 |
 | 8 | [2026-08-31_phase4-results.md](2026-08-31_phase4-results.md) | 31/08/2026 | Phase 4 kết quả: T_A bác bỏ (binary 0.2806 > STE 0.1951); bug dual-path phát hiện + sửa; cần chạy lại T01/T11 |
+| 9 | [2026-09-04_next-directions.md](2026-09-04_next-directions.md) | 04/09/2026 | Research strategy: audit bằng chứng (train/frozen/invalid), literature 25 paper đa nguồn + 29 PDF, novelty assessment (FANetv2 + predictive-coding 2026), xếp hạng X1–X6 → ưu tiên loss-side FP penalty + multi-seed; STE/dual-path bế tắc |
 
 ## Experiment Tracking
 
@@ -31,6 +32,9 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | Phase 4: train end-to-end 4 cells (T00/T10/T01/T11) loại BN mismatch | ⏳ Chờ chạy Kaggle T4 | Code + smoke-test CPU OK (4 cells 1 epoch, loss ~0.79); fallback negdice OK (loss ~1.25) | `notebooks/fanet_kaggle_phase4.py`, `scripts/train.py`, `src/fanet/losses.py` |
 | Phase 4 kết quả: T_A (STE train vs binary train) | Done | T_A KHÔNG ỦNG HỘ: binary 0.2806 > STE 0.1951 (delta -0.0855, p=0.277); train lại loại BN mismatch (frozen 0.239 → trained 0.281) | `results/phase4_eval.json`, `results/phase4_stats.json` |
 | Phase 4 bug: T01/T11 == T00/T10 (m_bg zeros khi train) | Fixed | Phát hiện bằng weight diff = 0; sửa m_bg = 1 - m_fg; cần chạy lại T01/T11 trên Kaggle | `notebooks/fanet_kaggle_phase4.py` |
+| Phase 4 run mới (papermill 9/4): T00/T10/T01/T11 + bug complement m_bg=1−m_fg | Done (chẩn đoán) | T00 0.5590 / T10 0.5611 / T01 0.6478 / T11 collapse (1.11–1.13 từ ep 40) — T01/T11 INVALID (complement triệt tiêu fmask); STE ≈ binary ở run này | `kaggle/fanet-phase4.ipynb` (cell 17) |
+| Literature grounding đa nguồn cho next directions (OpenAlex/arXiv/Europe PMC) | Done | 25 paper curated + novelty assessment (FANetv2, predictive-coding 2026); 29 PDF tải về docs/ | `docs/literature_grounding_next.md`, `docs/papers_not_accessible.md` |
+| Xếp hạng hướng tiếp theo X1–X6 | Planned | Ưu tiên X2+X5 (loss-side FP penalty, multi-seed ≈21+7 GPU-h); dự phòng X4 (0 GPU); X1 chỉ nếu X2 thất bại; pivot rule: FP không giảm ≥1pp ở seed đầu → reframe negative-result | `docs/reports/2026-09-04_next-directions.md` |
 
 ## Quy trình cập nhật
 

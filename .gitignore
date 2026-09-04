@@ -18,3 +18,5 @@ notebooks/.ipynb_checkpoints/
 .vscode/
 .idea/
 .DS_Store
+docs/*.pdf
+papers_not_accessible.md
