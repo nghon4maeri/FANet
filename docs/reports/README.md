@@ -15,6 +15,7 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | 7 | [2026-08-31_phase4-train-end-to-end.md](2026-08-31_phase4-train-end-to-end.md) | 31/08/2026 | Phase 4: code train 4 cells sẵn sàng + smoke-test CPU + fallback loss; chờ chạy Kaggle T4 |
 | 8 | [2026-08-31_phase4-results.md](2026-08-31_phase4-results.md) | 31/08/2026 | Phase 4 kết quả: T_A bác bỏ (binary 0.2806 > STE 0.1951); bug dual-path phát hiện + sửa; cần chạy lại T01/T11 |
 | 9 | [2026-09-04_next-directions.md](2026-09-04_next-directions.md) | 04/09/2026 | Research strategy: audit bằng chứng (train/frozen/invalid), literature 25 paper đa nguồn + 29 PDF, novelty assessment (FANetv2 + predictive-coding 2026), xếp hạng X1–X6 → ưu tiên loss-side FP penalty + multi-seed; STE/dual-path bế tắc |
+| 10 | [2026-09-05_new-papers-review.md](2026-09-05_new-papers-review.md) | 05/09/2026 | Đọc 7 paper tải tay (FEGNet, RefineU-Net, CBL, BCNet, CTNet, CFA-Net, BUNet): feedback của họ là feature-level nội mạng ≠ mask-at-input của FANet; Gate 1 X2 đổi sang wIoU+wBCE (+neg-area / boundary-weight); audit PDF — sửa 6/8 file sai, xóa 2 |
 
 ## Experiment Tracking
 
@@ -35,6 +36,8 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | Phase 4 run mới (papermill 9/4): T00/T10/T01/T11 + bug complement m_bg=1−m_fg | Done (chẩn đoán) | T00 0.5590 / T10 0.5611 / T01 0.6478 / T11 collapse (1.11–1.13 từ ep 40) — T01/T11 INVALID (complement triệt tiêu fmask); STE ≈ binary ở run này | `kaggle/fanet-phase4.ipynb` (cell 17) |
 | Literature grounding đa nguồn cho next directions (OpenAlex/arXiv/Europe PMC) | Done | 25 paper curated + novelty assessment (FANetv2, predictive-coding 2026); 29 PDF tải về docs/ | `docs/literature_grounding_next.md`, `docs/papers_not_accessible.md` |
 | Xếp hạng hướng tiếp theo X1–X6 | Planned | Ưu tiên X2+X5 (loss-side FP penalty, multi-seed ≈21+7 GPU-h); dự phòng X4 (0 GPU); X1 chỉ nếu X2 thất bại; pivot rule: FP không giảm ≥1pp ở seed đầu → reframe negative-result | `docs/reports/2026-09-04_next-directions.md` |
+| Review 7 paper mới (FEGNet, RefineU-Net, CBL, BCNet, CTNet, CFA-Net, BUNet) | Done | 5/7 dùng wIoU+wBCE; feedback thành công là feature-level nội mạng (soft gate, deep sup, ở skip) ≠ mask-at-input; Gate 1 X2 → wIoU+wBCE+neg-area & boundary-weight (1+5μ); novelty verdict giữ nguyên "mỏng" | `docs/reports/2026-09-05_new-papers-review.md`, `docs/literature_grounding_next.md` |
+| Audit PDF docs/ (38 file) | Done | 8 file sai nội dung (arXiv ID sai); sửa 6 (verify trang đầu), xóa 2 (STARCaps, DistanceTransform — OpenReview 403, chờ tải tay) | `papers_not_accessible.md` |
 
 ## Quy trình cập nhật
 
