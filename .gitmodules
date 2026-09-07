@@ -1,0 +1,3 @@
+[submodule "tools/vitranslate"]
+	path = tools/vitranslate
+	url = https://github.com/breslee1707/VI-Translate

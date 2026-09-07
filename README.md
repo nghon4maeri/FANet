@@ -27,7 +27,12 @@ FANet/
 │   └── grad_flow.py         # gradient-flow check for MixPool's fmask branch
 ├── notebooks/
 │   └── fanet_kaggle.py      # self-contained Kaggle notebook version
-├── docs/                    # papers + FANet_Complete_Guide.md
+├── docs/                    # papers + FANet_Complete_Guide.md + reports/
+├── papers/                  # research PDFs (original/ + translated/)
+├── tools/
+│   ├── pdf_translate.py     # PDF→Vietnamese translation wrapper (VI-Translate)
+│   ├── vitranslate/         # VI-Translate submodule (runtime engine)
+│   └── tests/               # integration smoke tests
 ├── data/                    # datasets (git-ignored, download separately)
 ├── assets/                  # architecture / qualitative figures
 ├── checkpoints/             # model weights (git-ignored)
@@ -76,6 +81,22 @@ gradient to the learned fmask branch):
 ```bash
 python analysis/grad_flow.py --config configs/kvasir_sessile.yaml
 ```
+
+## PDF translation (VI-Translate)
+
+Translate research PDFs into Vietnamese while preserving layout, formulas and
+figures. Inputs live under `papers/original/`, output under `papers/translated/`.
+
+```bash
+git submodule update --init --recursive     # one-time: fetch VI-Translate
+python tools/pdf_translate.py --setup        # one-time: create isolated runtime
+python tools/pdf_translate.py papers/original/attention.pdf
+# -> papers/translated/attention-vi.pdf
+```
+
+Google engine is the default (free, no API key, needs network). See
+[`docs/pdf_translate_guide.md`](docs/pdf_translate_guide.md) for options,
+engines, OCR, troubleshooting, and the OpenCode skill.
 
 ## Key findings so far
 
