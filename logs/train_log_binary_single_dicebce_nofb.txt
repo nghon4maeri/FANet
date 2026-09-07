@@ -1,0 +1,19 @@
+2026-09-07 18:46:44.525202
+Dataset Size:
+Train: 156 - Valid: 40
+
+Hyperparameters:
+Image Size: (256, 256)
+Batch Size: 2
+LR: 0.0001
+Epochs: 1
+Optimizer: Adam
+Loss: BCE Dice Loss
+No-feedback (T0N): True
+Seed: 43
+
+Saving checkpoint: checkpoints/checkpoint_binary_single_dicebce_nofb.pth
+Epoch: 01 | Epoch Time: 1m 44s
+	Train Loss: 0.785
+	 Val. Loss: 0.755
+

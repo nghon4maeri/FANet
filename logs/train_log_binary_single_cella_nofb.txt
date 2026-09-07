@@ -1,0 +1,19 @@
+2026-09-07 18:44:37.014203
+Dataset Size:
+Train: 156 - Valid: 40
+
+Hyperparameters:
+Image Size: (256, 256)
+Batch Size: 2
+LR: 0.0001
+Epochs: 1
+Optimizer: Adam
+Loss: Cell A: IoU+BCE + WSDice(v1=0.3)
+No-feedback (T0N): True
+Seed: 43
+
+Saving checkpoint: checkpoints/checkpoint_binary_single_cella_nofb.pth
+Epoch: 01 | Epoch Time: 1m 36s
+	Train Loss: 2.597
+	 Val. Loss: 3.059
+

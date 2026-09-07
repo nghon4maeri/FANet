@@ -16,6 +16,7 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | 8 | [2026-08-31_phase4-results.md](2026-08-31_phase4-results.md) | 31/08/2026 | Phase 4 kết quả: T_A bác bỏ (binary 0.2806 > STE 0.1951); bug dual-path phát hiện + sửa; cần chạy lại T01/T11 |
 | 9 | [2026-09-04_next-directions.md](2026-09-04_next-directions.md) | 04/09/2026 | Research strategy: audit bằng chứng (train/frozen/invalid), literature 25 paper đa nguồn + 29 PDF, novelty assessment (FANetv2 + predictive-coding 2026), xếp hạng X1–X6 → ưu tiên loss-side FP penalty + multi-seed; STE/dual-path bế tắc |
 | 10 | [2026-09-05_new-papers-review.md](2026-09-05_new-papers-review.md) | 05/09/2026 | Đọc 7 paper tải tay (FEGNet, RefineU-Net, CBL, BCNet, CTNet, CFA-Net, BUNet): feedback của họ là feature-level nội mạng ≠ mask-at-input của FANet; Gate 1 X2 đổi sang wIoU+wBCE (+neg-area / boundary-weight); audit PDF — sửa 6/8 file sai, xóa 2 |
+| 11 | [2026-09-07_phase5-x2-gate01.md](2026-09-07_phase5-x2-gate01.md) | 07/09/2026 | Phase 5: verify 1a/1b (μ nặng biên → pivot far-weighted; WSDice công thức gốc), code + smoke 3 cells (T0N/TA/TB), notebook phase5 sẵn sàng, X4 verdict ĐÓNG STE; Gate 0/1 chờ chạy Kaggle |
 
 ## Experiment Tracking
 
@@ -38,6 +39,9 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | Xếp hạng hướng tiếp theo X1–X6 | Planned | Ưu tiên X2+X5 (loss-side FP penalty, multi-seed ≈21+7 GPU-h); dự phòng X4 (0 GPU); X1 chỉ nếu X2 thất bại; pivot rule: FP không giảm ≥1pp ở seed đầu → reframe negative-result | `docs/reports/2026-09-04_next-directions.md` |
 | Review 7 paper mới (FEGNet, RefineU-Net, CBL, BCNet, CTNet, CFA-Net, BUNet) | Done | 5/7 dùng wIoU+wBCE; feedback thành công là feature-level nội mạng (soft gate, deep sup, ở skip) ≠ mask-at-input; Gate 1 X2 → wIoU+wBCE+neg-area & boundary-weight (1+5μ); novelty verdict giữ nguyên "mỏng" | `docs/reports/2026-09-05_new-papers-review.md`, `docs/literature_grounding_next.md` |
 | Audit PDF docs/ (38 file) | Done | 8 file sai nội dung (arXiv ID sai); sửa 6 (verify trang đầu), xóa 2 (STARCaps, DistanceTransform — OpenReview 403, chờ tải tay) | `papers_not_accessible.md` |
+| Phase 5 verify 1a/1b: μ (CFA/F³Net) + WSDice gốc | Done | μ nặng BIÊN → pivot far-weighted (1+5(1−μ)); WSDice = 1−[2ΣĜG]/[ΣĜ²+ΣG²], w=y(v2−v1)+v1, v1=0.3 heuristic | `src/fanet/losses.py`, `docs/reports/2026-09-07_phase5-x2-gate01.md` |
+| Phase 5 X4: chẩn đoán STE (CPU, ckpt disk) | Done | STE grad chảy (13107) nhưng var < soft; fmask encoder corr ~0.2 (yếu); BN shift lớn (d1.r1.bn1 mean_abs 18.8) → ĐÓNG STE vĩnh viễn | `results/x4_ste_diagnosis.json`, `kaggle/figures/fig_x4_*.png` |
+| Phase 5 X2 Gate 0 (T0N) + Gate 1 (TA/TB) | ⏳ Chờ user chạy Kaggle | Code + smoke CPU OK (3 cells 1 epoch); notebook `kaggle/fanet-phase5.ipynb` + `analysis/phase5_eval.py` sẵn sàng | `notebooks/fanet_kaggle_phase5.py`, `scripts/train.py` |
 
 ## Quy trình cập nhật
 

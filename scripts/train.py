@@ -23,7 +23,8 @@ from fanet.utils import (
 )
 
 
-def train(model, loader, mask, optimizer, loss_fn, device, size, dual_path=False):
+def train(model, loader, mask, optimizer, loss_fn, device, size, dual_path=False,
+          no_feedback=False):
     epoch_loss = 0
     return_mask = []
 
@@ -33,10 +34,13 @@ def train(model, loader, mask, optimizer, loss_fn, device, size, dual_path=False
         y = y.to(device, dtype=torch.float32)
 
         b = y.shape[0]
-        m = rle_batch_to_tensor(mask, i * b, b, size)
-        if dual_path:
-            bg = (1.0 - m)
-            m = torch.cat([m, bg], dim=1)
+        if no_feedback:
+            m = torch.zeros(b, 1, *size)
+        else:
+            m = rle_batch_to_tensor(mask, i * b, b, size)
+            if dual_path:
+                bg = (1.0 - m)
+                m = torch.cat([m, bg], dim=1)
         m = m.to(device)
 
         optimizer.zero_grad()
@@ -58,7 +62,8 @@ def train(model, loader, mask, optimizer, loss_fn, device, size, dual_path=False
     return epoch_loss / len(loader), return_mask
 
 
-def evaluate(model, loader, mask, loss_fn, device, size, dual_path=False):
+def evaluate(model, loader, mask, loss_fn, device, size, dual_path=False,
+             no_feedback=False):
     epoch_loss = 0
     return_mask = []
 
@@ -69,10 +74,13 @@ def evaluate(model, loader, mask, loss_fn, device, size, dual_path=False):
             y = y.to(device, dtype=torch.float32)
 
             b = y.shape[0]
-            m = rle_batch_to_tensor(mask, i * b, b, size)
-            if dual_path:
-                bg = (1.0 - m)
-                m = torch.cat([m, bg], dim=1)
+            if no_feedback:
+                m = torch.zeros(b, 1, *size)
+            else:
+                m = rle_batch_to_tensor(mask, i * b, b, size)
+                if dual_path:
+                    bg = (1.0 - m)
+                    m = torch.cat([m, bg], dim=1)
             m = m.to(device)
 
             y_pred = model([x, m])
@@ -102,8 +110,12 @@ def main():
     parser.add_argument("--epochs", type=int, default=None,
                         help="override num epochs (smoke test)")
     parser.add_argument("--loss", type=str, default="dicebce",
-                        choices=["dicebce", "negdice"],
-                        help="loss fn (fallback F1: negdice = negative-area Dice)")
+                        choices=["dicebce", "negdice", "cella", "farwiou"],
+                        help="loss: dicebce | negdice | cella (IoU+BCE+WSDice) | farwiou (far-weighted)")
+    parser.add_argument("--no-feedback", action="store_true",
+                        help="T0N: feed zero mask (no Otsu init, no cross-epoch feedback loop)")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="override random seed")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -116,14 +128,18 @@ def main():
     aug = cfg["train"]["augmentation"]
     gate = args.gate
     dual_path = args.dual_path
+    no_feedback = args.no_feedback
+    seed = args.seed or cfg["train"]["seed"]
 
-    if gate != "binary" or dual_path or args.loss != "dicebce":
+    if gate != "binary" or dual_path or args.loss != "dicebce" or no_feedback:
         base, ext = os.path.splitext(checkpoint_path)
-        checkpoint_path = f"{base}_{gate}_{'dual' if dual_path else 'single'}_{args.loss}{ext}"
-        train_log_path = (f"{os.path.splitext(train_log_path)[0]}_{gate}_"
-                          f"{'dual' if dual_path else 'single'}_{args.loss}.txt")
+        tag = f"{gate}_{'dual' if dual_path else 'single'}_{args.loss}"
+        if no_feedback:
+            tag += "_nofb"
+        checkpoint_path = f"{base}_{tag}{ext}"
+        train_log_path = (f"{os.path.splitext(train_log_path)[0]}_{tag}.txt")
 
-    seeding(cfg["train"]["seed"])
+    seeding(seed)
 
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
     os.makedirs(os.path.dirname(train_log_path), exist_ok=True)
@@ -162,14 +178,23 @@ def main():
     if args.loss == "negdice":
         from fanet.losses import NegativeAreaDiceBCELoss
         loss_fn = NegativeAreaDiceBCELoss(fp_weight=0.5)
-        loss_name = "NegativeAreaDiceBCE (fallback F1)"
+        loss_name = "NegativeAreaDiceBCE (soft surrogate)"
+    elif args.loss == "cella":
+        from fanet.losses import Phase5CellALoss
+        loss_fn = Phase5CellALoss(v1=0.3, lambda_w=1.0)
+        loss_name = "Cell A: IoU+BCE + WSDice(v1=0.3)"
+    elif args.loss == "farwiou":
+        from fanet.losses import FarWeightedIoUBCELoss
+        loss_fn = FarWeightedIoUBCELoss(gamma=5.0)
+        loss_name = "Cell B: far-weighted wIoU+wBCE (1+5(1-mu))"
     else:
         loss_fn = DiceBCELoss()
         loss_name = "BCE Dice Loss"
 
     print_and_save(train_log_path,
                    f"Hyperparameters:\nImage Size: {size}\nBatch Size: {batch_size}"
-                   f"\nLR: {lr}\nEpochs: {num_epochs}\nOptimizer: Adam\nLoss: {loss_name}\n")
+                   f"\nLR: {lr}\nEpochs: {num_epochs}\nOptimizer: Adam\nLoss: {loss_name}"
+                   f"\nNo-feedback (T0N): {no_feedback}\nSeed: {seed}\n")
 
     best_valid_loss = float('inf')
     train_mask = init_mask(train_x, size)
@@ -179,17 +204,20 @@ def main():
         start_time = time.time()
 
         train_loss, return_train_mask = train(
-            model, train_loader, train_mask, optimizer, loss_fn, device, size, dual_path)
+            model, train_loader, train_mask, optimizer, loss_fn, device, size, dual_path,
+            no_feedback)
         valid_loss, return_valid_mask = evaluate(
-            model, valid_loader, valid_mask, loss_fn, device, size, dual_path)
+            model, valid_loader, valid_mask, loss_fn, device, size, dual_path,
+            no_feedback)
         scheduler.step(valid_loss)
 
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             print_and_save(train_log_path, f"Saving checkpoint: {checkpoint_path}")
             torch.save(model.state_dict(), checkpoint_path)
-            train_mask = return_train_mask
-            valid_mask = return_valid_mask
+            if not no_feedback:
+                train_mask = return_train_mask
+                valid_mask = return_valid_mask
 
         end_time = time.time()
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
