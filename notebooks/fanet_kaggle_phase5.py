@@ -410,7 +410,7 @@ def eval_epoch(model, loader, mask_list, loss_fn, no_feedback):
             loss = loss_fn(pred, y); total += loss.item()
             p = torch.sigmoid(pred)
             inter = (p * y).sum()
-            dice_sum += (2.0 * inter + 1.0) / (p.sum() + y.sum() + 1.0)
+            dice_sum += ((2.0 * inter + 1.0) / (p.sum() + y.sum() + 1.0)).item()
             for py in (p > 0.5).cpu().numpy().astype(np.uint8):
                 new_masks.append(rle_encode(np.squeeze(py, 0)))
     return total / len(loader), dice_sum / len(loader), new_masks
