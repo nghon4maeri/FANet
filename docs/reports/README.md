@@ -18,6 +18,7 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | 10 | [2026-09-05_new-papers-review.md](2026-09-05_new-papers-review.md) | 05/09/2026 | Đọc 7 paper tải tay (FEGNet, RefineU-Net, CBL, BCNet, CTNet, CFA-Net, BUNet): feedback của họ là feature-level nội mạng ≠ mask-at-input của FANet; Gate 1 X2 đổi sang wIoU+wBCE (+neg-area / boundary-weight); audit PDF — sửa 6/8 file sai, xóa 2 |
 | 11 | [2026-09-07_phase5-x2-gate01.md](2026-09-07_phase5-x2-gate01.md) | 07/09/2026 | Phase 5: verify 1a/1b (μ nặng biên → pivot far-weighted; WSDice công thức gốc), code + smoke 3 cells (T0N/TA/TB), notebook phase5 sẵn sàng, X4 verdict ĐÓNG STE; Gate 0/1 chờ chạy Kaggle |
 | 12 | [2026-09-08_research-overview.md](2026-09-08_research-overview.md) | 08/09/2026 | **Báo cáo tổng quan nghiên cứu** (research overview) — bản dễ hiểu cho người mới: giải thích khái niệm nền (polyp, mask, attention, feedback, FP/FN...), kể lại hành trình nghiên cứu theo trình tự (reproduce → phát hiện điểm yếu → 3 hướng thất bại → định vị root cause → pivot loss-side → đang chờ Kaggle), bảng kết quả chính, định hướng novelty + dàn ý paper + future work + từ điển thuật ngữ |
+| 13 | [2026-09-08_phase5-results.md](2026-09-08_phase5-results.md) | 08/09/2026 | **Phase 5 KẾT QUẢ (Gate 0/1)**: Kaggle T4 đã chạy xong (T0N/TA/TB × 200ep, seed 43). Gate 0 → feedback loop là liability trên Dice (T0N 0.3034 ≥ T00 0.2806) nhưng KHÔNG giải quyết FP (FP +1.91pp); Gate 1 **FAIL cả 2 cell** (TA WSDice không giảm FP; TB far-weighted Dice COLLAPSE 0.0086 — soft-dice train che giấu collapse) → **KHÔNG multi-seed, dừng GPU, pivot negative-result paper**. Stats chuẩn: Wilcoxon + rank-biserial + bootstrap CI + BF10 + sensitivity |
 
 ## Experiment Tracking
 
@@ -42,7 +43,7 @@ Index tổng hợp các báo cáo nghiên cứu của dự án FANet (Feedback A
 | Audit PDF docs/ (38 file) | Done | 8 file sai nội dung (arXiv ID sai); sửa 6 (verify trang đầu), xóa 2 (STARCaps, DistanceTransform — OpenReview 403, chờ tải tay) | `papers_not_accessible.md` |
 | Phase 5 verify 1a/1b: μ (CFA/F³Net) + WSDice gốc | Done | μ nặng BIÊN → pivot far-weighted (1+5(1−μ)); WSDice = 1−[2ΣĜG]/[ΣĜ²+ΣG²], w=y(v2−v1)+v1, v1=0.3 heuristic | `src/fanet/losses.py`, `docs/reports/2026-09-07_phase5-x2-gate01.md` |
 | Phase 5 X4: chẩn đoán STE (CPU, ckpt disk) | Done | STE grad chảy (13107) nhưng var < soft; fmask encoder corr ~0.2 (yếu); BN shift lớn (d1.r1.bn1 mean_abs 18.8) → ĐÓNG STE vĩnh viễn | `results/x4_ste_diagnosis.json`, `kaggle/figures/fig_x4_*.png` |
-| Phase 5 X2 Gate 0 (T0N) + Gate 1 (TA/TB) | ⏳ Chờ user chạy Kaggle | Code + smoke CPU OK (3 cells 1 epoch); notebook `kaggle/fanet-phase5.ipynb` + `analysis/phase5_eval.py` sẵn sàng | `notebooks/fanet_kaggle_phase5.py`, `scripts/train.py` |
+| Phase 5 X2 Gate 0 (T0N) + Gate 1 (TA/TB) | ✅ Done (Kaggle 08/09) | **Gate 0**: feedback loop = liability trên Dice (T0N 0.3034 ≥ T00 0.2806, p=.36, BF10=0.21→null) nhưng FP TĂNG +1.91pp → không phải nguồn gốc FP. **Gate 1 FAIL**: TA (WSDice) FP 5.19% không giảm; TB (far-weighted) Dice 0.0086 COLLAPSE (recall 0.0047; soft-dice train 0.19 che giấu). → **KHÔNG multi-seed; pivot negative-result paper** | `results/phase5_eval.json`, `results/phase5_stats.json`, `results/phase5_stats_full.json`, `checkpoints_phase5/`, `kaggle/figures/fig_p5_*.png` |
 
 ## Quy trình cập nhật
 

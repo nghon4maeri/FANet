@@ -203,12 +203,30 @@ Công việc đã làm:
 - Chuẩn bị notebook chạy trên GPU đám mây (Kaggle) với 3 mô hình: không-feedback,
   loss WSDice, loss far-weighted.
 
-### D.6. Bước 5 — Đang chạy thí nghiệm cuối (hiện tại)
+### D.6. Bước 5 — Thí nghiệm cuối (loss-side): KẾT QUẢ (08/09/2026)
 
-**Trạng thái hiện tại:**
-- ✅ Toàn bộ phần chuẩn bị (code, verify công thức, smoke test) **đã xong**.
-- ⏳ **Đang chờ chạy trên Kaggle (GPU)** — 3 mô hình × 200 vòng lặp. Sau khi có kết
-  quả sẽ đánh giá theo quy trình quyết định 3 bậc (xem PHẦN F.3).
+**Đã chạy xong trên Kaggle (GPU T4, 3 mô hình × 200 vòng, seed 43).** Kết quả theo
+quy trình quyết định 3 bậc (Gate 0/1):
+
+- **Gate 0 (có nên bỏ feedback?):** Mô hình **không-feedback** đạt Dice 0.3034 ≥ mô hình
+  có-feedback 0.2806 → theo quy tắc đã đăng ký, **vòng feedback là gánh nặng trên Dice**
+  (nhưng khác biệt KHÔNG có ý nghĩa thống kê, p=0.36; bằng chứng Bayes ủng hộ "không khác
+  biệt"). Quan trọng: bỏ feedback làm **FP TĂNG (+1.9 điểm phần trăm)** → feedback không
+  phải nguồn gốc của lỗi vẽ thừa.
+- **Gate 1 (loss phạt vẽ thừa có giúp?):** **CẢ 2 loại loss đều THẤT BẠI.**
+  - Loss **WSDice**: không giảm được FP (FP 5.19% vs 4.62% baseline).
+  - Loss **far-weighted** (nặng vùng nền): giảm FP mạnh (0.05%) nhưng **Dice sụp về
+    0.0086** — mô hình học "đoán toàn background" để né phạt → vô nghĩa. Lưu ý: trong
+    lúc train, soft-dice (~0.19) che giấu sự sụp đổ này — chỉ lộ ra khi đánh giá bằng
+    ngưỡng nhị phân. Đây là bài học methodology.
+- **Phán quyết (theo stopping rule):** **Gate 1 FAIL → KHÔNG chạy multi-seed, dừng đốt
+  GPU cho hướng loss-side.** Chuyển hướng sang viết **negative-result paper** + chẩn
+  đoán vì sao FP "cứng đầu" (xem PHẦN F.3).
+
+> **Tổng kết toàn hành trình:** 5 hướng cải tiến đã thử (confidence-gating, dual-path,
+> STE, WSDice, far-weighted) — **tất cả đều thất bại có kiểm soát**, mỗi cái có số liệu
+> và lý do rõ ràng. Giá trị khoa học nằm ở chính **khung phân tích negative-result
+> chuẩn mực** này, không phải ở một cơ chế "hack" số.
 
 ---
 
@@ -224,12 +242,15 @@ Công việc đã làm:
 | Sửa nhánh attention (STE) giúp không? | Baseline 0.281 vs STE 0.195 | **KHÔNG giúp, còn kém** → đóng hướng | Trung bình (1 seed) |
 | Mô hình baseline mới đạt bao nhiêu? | Dice 0.2806, IoU 0.1955 | Đây là điểm chuẩn (baseline) để so sánh mọi thứ sau | Chắc chắn (train đủ) |
 | Còn bao nhiêu "dư địa" để cải thiện? | Oracle đạt 0.331–0.370 (cao hơn baseline ~0.09) | Có khoảng trống thật, chủ yếu ở việc dọn vùng nền | Trung bình |
+| **Bỏ feedback hẳn có tốt hơn không? (Gate 0)** | Không-feedback Dice 0.3034 ≥ feedback 0.2806; **nhưng FP tăng +1.9pp**; p=0.36 (không ý nghĩa) | **Feedback là gánh nặng trên Dice** nhưng KHÔNG phải nguồn gốc lỗi vẽ thừa | Trung bình (1 seed) |
+| **Loss WSDice có dọn lỗi vẽ thừa? (Gate 1)** | FP 5.19% vs baseline 4.62% (không giảm) | **KHÔNG** — không giảm được FP | Trung bình (1 seed) |
+| **Loss far-weighted (nặng nền)? (Gate 1)** | FP 0.05% nhưng **Dice sụp 0.0086** (mô hình đoán toàn nền) | **THẤT BẠI** — giảm FP vô nghĩa vì không còn dự đoán được polyp | Trung bình (1 seed; collapse rõ) |
 
-> **Bản chất của cả hành trình:** dự án thử 3 hướng cải tiến cơ chế feedback —
-> **cả 3 đều thất bại một cách trung thực** (có số liệu, có lý do). Nhưng thất bại
-> này lại **định vị chính xác gốc rễ vấn đề** (vẽ thừa vùng nền, chưa từng bị phạt
-> từ loss) và dẫn tới hướng mới có nhiều bằng chứng ủng hộ nhất. Đây chính là giá trị
-> khoa học của dự án.
+> **Bản chất của cả hành trình:** dự án thử **5 hướng cải tiến** (confidence-gating,
+> dual-path, STE, WSDice, far-weighted) — **tất cả đều thất bại một cách trung thực**
+> (có số liệu, có lý do, có stopping rule). Nhưng thất bại này **định vị chính xác gốc
+> rễ vấn đề** (vẽ thừa vùng nền, kháng cự cả cơ chế feedback lẫn loss-side) và dẫn tới
+> một bài báo negative-result chuẩn mực — đây chính là giá trị khoa học của dự án.
 
 ---
 
@@ -239,14 +260,15 @@ Công việc đã làm:
 
 | # | Đóng góp | Khả thi | Giải thích ngắn |
 |---|---|---|---|
-| 1 | **Phân tích phủ định có hệ thống** | Cao | Chỉ rõ 3 hướng cải tiến feedback thất bại và vì sao — đúng chuẩn "negative result" khoa học, vẫn publish được |
+| 1 | **Phân tích phủ định có hệ thống** | **Cao (đã đủ dữ liệu)** | Chỉ rõ **5 hướng cải tiến thất bại và vì sao** — đúng chuẩn "negative result" khoa học, vẫn publish được |
 | 2 | **Phát hiện chẩn đoán**: nhánh "tự học" của FANet là non-differentiable (không học được) | Cao | Phát hiện mới, có bằng chứng đo trực tiếp, giá trị cho cộng đồng tái hiện FANet |
-| 3 | **Phạt lỗi vẽ thừa từ loss** (nếu thí nghiệm cuối thành công) | Trung bình | Cải tiến thực nghiệm — cần kết quả Kaggle |
+| 3 | **Phát hiện: soft-dice lúc train che giấu collapse** (TB) — bài học methodology | Cao | Phát hiện mới từ Phase 5; khuyến nghị theo dõi binary val-dice khi dùng loss-side |
 | 4 | **Định vị dư địa** bằng oracle (84.6% nằm ở vùng vẽ thừa, xa biên 40.7px) | Cao | Phân tích hướng thiết kế, đã có dữ liệu |
 
-**Chiến lược:** nếu thí nghiệm loss thành công → bài báo kiểu "phương pháp mới + phân
-tích chẩn đoán". Nếu thất bại → bài báo kiểu "negative result chuẩn mực". **Cả hai
-đều có thể xuất bản** vì phần phân tích/bug-tracking của dự án rất chặt chẽ.
+**Chiến lược (đã chốt sau Phase 5):** hướng loss-side **thất bại** (Gate 1 FAIL) →
+bài báo theo **negative-result chuẩn mực** (đóng góp 1+2+3+4): tổng hợp 5 hướng thất
+bại có kiểm soát + khung chẩn đoán/bug-tracking chặt chẽ — đủ để publish ở các venue
+chấp nhận reproducibility/negative-result.
 
 ### F.2. Dàn ý bài báo (sơ bộ)
 
@@ -260,17 +282,20 @@ tích chẩn đoán". Nếu thất bại → bài báo kiểu "negative result c
 6. Kết luận & hướng tương lai.
 ```
 
-### F.3. Việc cần làm tiếp theo
+### F.3. Việc cần làm tiếp theo (đã cập nhật sau kết quả Phase 5)
 
 | Ưu tiên | Việc | Điều kiện |
 |---|---|---|
-| 1 | **Chạy thí nghiệm cuối trên Kaggle** (3 mô hình × 200 vòng) | Bạn submit notebook trên GPU |
-| 2 | Đánh giá kết quả theo quy trình 3 bậc: (a) so "không-feedback" vs baseline → feedback có phải gánh nặng không; (b) loss mới có giảm lỗi vẽ thừa ≥1% không; (c) chạy 3 hạt giống (seed) để chắc chắn | — |
-| 3 | Nếu loss thắng → chạy thêm nhiều dataset (Kvasir đầy đủ, CVC, DRIVE...) | — |
-| 4 | Hoàn thiện bài báo (phân tích + tái lập) | Song song |
+| 1 | ✅ **Đã xong: thí nghiệm loss-side trên Kaggle** (3 mô hình × 200 vòng) | Đã chạy, Gate 1 FAIL |
+| 2 | ✅ **Đã xong: đánh giá quy trình 3 bậc** — (a) feedback là gánh nặng trên Dice nhưng không phải nguồn gốc FP; (b) loss mới không giảm FP (WSDice) hoặc sụp Dice (far-weighted); (c) **KHÔNG chạy multi-seed** vì Gate 1 fail | — |
+| 3 | **Pivot sang negative-result paper**: tổng hợp 5 hướng thất bại có kiểm soát + khung phân tích/bug-tracking + stats chuẩn (Wilcoxon, effect size, CI, Bayes, sensitivity) | Chính là dữ liệu hiện có |
+| 4 | **Chẩn đoán vì sao FP "cứng đầu"** (BN stats, Otsu init, đặc thù split 156/40) — câu hỏi mở cho paper | Không tốn GPU |
+| 5 | Hoàn thiện bài báo (phân tích + tái lập + reproducibility appendix) | Song song |
+| 6 | (Tùy chọn) baseline multi-seed để củng cố nền thống kê cho claim negative | Chỉ khi cần power cho viết paper |
 
 **Đã quyết định bỏ/hoãn:** hướng STE (đóng vĩnh viễn), hướng kênh nền tường minh
-(prior thấp), các loss chỉ chữa biên (không chữa đúng gốc rễ vẽ thừa vùng nền xa).
+(prior thấp), các loss chỉ chữa biên (không chữa đúng gốc rễ vẽ thừa vùng nền xa),
+**hướng loss-side FP penalty (WSDice/far-weighted) — Gate 1 FAIL, đóng sau Phase 5**.
 
 ---
 
@@ -307,7 +332,7 @@ tích chẩn đoán". Nếu thất bại → bài báo kiểu "negative result c
 > - **Tài liệu mô tả kiến trúc FANet:** `docs/FANet_Complete_Guide.md`
 > - **Danh sách bài báo liên quan (32 bài):** `docs/literature_grounding_next.md`
 > - **Báo cáo chi tiết từng giai đoạn:** `docs/reports/` (mở `README.md` để xem mục lục)
-> - **Số liệu kết quả:** thư mục `results/` (JSON/CSV)
-> - **Nhật ký chạy:** thư mục `logs/`
-> - **Mô hình đã train:** thư mục `checkpoints/`
+> - **Số liệu kết quả:** thư mục `results/` (JSON/CSV) — Phase 5: `phase5_eval.json`, `phase5_stats.json`, `phase5_stats_full.json`
+> - **Nhật ký chạy:** thư mục `logs/` + `kaggle/outputs_phase5/fanet-phase5.log`
+> - **Mô hình đã train:** thư mục `checkpoints/`, `checkpoints_phase4/`, `checkpoints_phase5/`
 > - **Mã nguồn:** `src/fanet/`, `scripts/`, `analysis/`
