@@ -277,35 +277,86 @@ Công việc đã làm:
 ### D.6. Bước 5 — Thí nghiệm cuối (loss-side): KẾT QUẢ (08/09/2026)
 
 **Đã chạy xong trên Kaggle (GPU T4, 3 mô hình × 200 vòng, seed 43).** Kết quả theo
-quy trình quyết định 3 bậc (Gate 0/1):
+quy trình quyết định 3 bậc đã đăng ký:
 
-- **Gate 0 (có nên bỏ feedback?):** Mô hình **không-feedback** đạt Dice 0.3034 ≥ mô hình
+- **Kiểm tra thứ nhất — có nên bỏ feedback?:** Mô hình **không-feedback** đạt Dice 0.3034 ≥ mô hình
   có-feedback 0.2806 → theo quy tắc đã đăng ký, **vòng feedback là gánh nặng trên Dice**
   (nhưng khác biệt KHÔNG có ý nghĩa thống kê, p=0.36; bằng chứng Bayes ủng hộ "không khác
   biệt"). Quan trọng: bỏ feedback làm **FP TĂNG (+1.9 điểm phần trăm)** → feedback không
   phải nguồn gốc của lỗi vẽ thừa.
-- **Gate 1 (loss phạt vẽ thừa có giúp?):** **CẢ 2 loại loss đều THẤT BẠI.**
+- **Kiểm tra thứ hai — loss phạt vẽ thừa có giúp?:** **CẢ 2 loại loss đều THẤT BẠI.**
   - Loss **WSDice**: không giảm được FP (FP 5.19% vs 4.62% baseline).
   - Loss **far-weighted** (nặng vùng nền): giảm FP mạnh (0.05%) nhưng **Dice sụp về
     0.0086** — mô hình học "đoán toàn background" để né phạt → vô nghĩa. Lưu ý: trong
     lúc train, soft-dice (~0.19) che giấu sự sụp đổ này — chỉ lộ ra khi đánh giá bằng
     ngưỡng nhị phân. Đây là bài học methodology.
-- **Phán quyết (theo stopping rule):** **Gate 1 FAIL → KHÔNG chạy multi-seed, dừng đốt
-  GPU cho hướng loss-side.** Chuyển hướng sang viết **negative-result paper** + chẩn
-  đoán vì sao FP "cứng đầu" (xem PHẦN F.3).
+- **Phán quyết (theo quy tắc đã đăng ký):** **Kiểm tra thứ hai THẤT BẠI → KHÔNG chạy
+  thêm nhiều hạt giống (seed), dừng đốt GPU cho hướng loss-side.** Chuyển hướng sang
+  viết **negative-result paper** + chẩn đoán vì sao FP "cứng đầu" (xem PHẦN F.3).
 
-**Bằng chứng (Phase 5 — Gate 0/1):**
+**Bằng chứng (Phase 5 — 2 kiểm tra):**
 
-![Dice / FP / FN của 4 mô hình — T0N cao Dice, TB sụp hoàn toàn](../../kaggle/figures/fig_p5_final_metrics.png)
+![Dice / FP / FN của 4 mô hình — mô hình không-feedback cao Dice, mô hình far-weighted sụp hoàn toàn](../../kaggle/figures/fig_p5_final_metrics.png)
 
-![Phân phối delta Dice per-image — TB lệch hẳn về âm (collapse)](../../kaggle/figures/fig_p5_paired_delta_TB.png)
+![Phân phối chênh lệch Dice từng ảnh — mô hình far-weighted lệch hẳn về âm (sụp)](../../kaggle/figures/fig_p5_paired_delta_TB.png)
 
 - `results/phase5_eval.json`, `results/phase5_stats.json`, `results/phase5_stats_full.json`
-  → T0N Dice 0.3034 vs T00 0.2806 (p=.36, BF10=0.21 ủng hộ null, FP +1.91pp); TA FP 5.19%
-  (không giảm); TB Dice 0.0086 (recall 0.0047).
+  → không-feedback Dice 0.3034 vs baseline có-feedback 0.2806 (p=.36, bằng chứng Bayes
+  ủng hộ "không khác biệt", FP +1.91pp); loss WSDice FP 5.19%
+  (không giảm); loss far-weighted Dice 0.0086 (recall 0.0047).
 - `checkpoints_phase5/train_log_*.csv` + `kaggle/figures/fig_p5_train_curves.png` →
-  TB soft-dice lúc train ~0.19 nhưng binary eval sụp → **soft-dice che giấu collapse**.
+  loss far-weighted soft-dice lúc train ~0.19 nhưng binary eval sụp → **soft-dice che
+  giấu collapse**.
 - Kernel log: `kaggle/outputs_phase5/fanet-phase5.log` (200 epochs × 3 cells, seed 43).
+
+### D.7. Bản đồ các hướng nghiên cứu — Đã thử gì, bác bỏ gì, đang làm gì
+
+> **Tóm tắt trực tiếp:** Dự án có **6 hướng nghiên cứu** đã liệt kê từ đầu (audit 04/09),
+> cộng thêm các cơ chế thử nghiệm trước đó. **Đã thử 5 hướng → CẢ 5 ĐỀU BỊ BÁC BỎ (reject)**
+> có kiểm soát. **Hiện tại không còn hướng "thêm cơ chế" nào đang chạy** — đang chuyển
+> sang **viết negative-result paper** và **chẩn đoán vì sao FP cứng đầu**.
+
+| # | Hướng nghiên cứu | Làm gì (đơn giản) | Trạng thái |
+|---|---|---|---|
+| 1 | **Confidence-gating** | Feedback chỉ giữ vùng mô hình tự tin cao | ✅ Đã thử → **BÁC BỎ** (không giảm lỗi) |
+| 2 | **Dual-path (kênh nền tường minh)** | Thêm thông tin nền vào feedback để dọn lỗi vẽ thừa | ✅ Đã thử → **BÁC BỎ** (FP tăng; train không ổn định) |
+| 3 | **Hồi sinh nhánh attention (STE)** | Sửa phép so sánh cứng để nhánh "tự học" học được | ✅ Đã thử → **BÁC BỎ** (kết quả kém hơn; đóng vĩnh viễn) |
+| 4 | **Loss WSDice** | Phạt lỗi vẽ thừa ngay trong hàm mất mát | ✅ Đã thử → **BÁC BỎ** (không giảm FP) |
+| 5 | **Loss far-weighted (nặng vùng nền)** | Phạt nặng vùng nền để ép mô hình bớt vẽ thừa | ✅ Đã thử → **BÁC BỎ** (Dice sụp 0.0086 — model đoán toàn nền) |
+| 6 | **Chẩn đoán vì sao FP "cứng đầu"** | Tìm nguyên nhân sâu (BN, Otsu, đặc thù split) | 🔄 **ĐANG LÀM** (không tốn GPU) |
+| 7 | **Negative-result paper** | Viết bài báo theo hướng "phủ định có hệ thống" | 🔄 **ĐANG LÀM** (dữ liệu đã đủ) |
+
+**Các hướng đã cân nhắc nhưng CHƯA làm (trì hoãn hoặc đóng):**
+- **Multi-seed (chạy nhiều hạt giống để chắc thống kê):** ❌ KHÔNG chạy — vì hướng
+  loss-side thất bại ở bước kiểm tra đầu (không đáng đốt thêm GPU).
+- **Feedback ở tầng giữa mạng (kiểu FEGNet):** ⏸ trì hoãn — chỉ xét khi cần quay lại
+  dòng "feedback" sau này.
+- **Prediction-error feedback (theo bài báo 2026):** ⏸ trì hoãn — chi phí cao, chưa
+  cần thiết.
+
+```mermaid
+flowchart TB
+    accTitle: Bản đồ hướng nghiên cứu FANet
+    accDescr: Năm hướng đã thử đều bị bác bỏ có kiểm soát; hiện tại chuyển sang viết negative-result paper và chẩn đoán FP cứng đầu.
+
+    tried["ĐÃ THỬ (5)"] --> c1["Confidence-gating ❌"]
+    tried --> c2["Dual-path kênh nền ❌"]
+    tried --> c3["Hồi sinh attention (STE) ❌"]
+    tried --> c4["Loss WSDice ❌"]
+    tried --> c5["Loss far-weighted ❌"]
+    current["ĐANG LÀM (2)"] --> n1["Chẩn đoán FP cứng đầu"]
+    current --> n2["Viết negative-result paper"]
+    closed["CHƯA LÀM (đóng/trì hoãn)"] --> m1["Multi-seed ❌ đóng"]
+    closed --> m2["Feedback tầng giữa ⏸"]
+    closed --> m3["Prediction-error feedback ⏸"]
+
+    classDef tried fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d
+    classDef cur fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
+    classDef closed fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12
+    class tried,c1,c2,c3,c4,c5 tried
+    class current,n1,n2 cur
+    class closed,m1,m2,m3 closed
+```
 
 > **Tổng kết toàn hành trình:** 5 hướng cải tiến đã thử (confidence-gating, dual-path,
 > STE, WSDice, far-weighted) — **tất cả đều thất bại có kiểm soát**, mỗi cái có số liệu
@@ -326,9 +377,9 @@ quy trình quyết định 3 bậc (Gate 0/1):
 | Sửa nhánh attention (STE) giúp không? | Baseline 0.281 vs STE 0.195 | **KHÔNG giúp, còn kém** → đóng hướng | Trung bình (1 seed) | `results/phase4_eval.json`, `results/x4_ste_diagnosis.json` + hình `fig_p4_train_curves.png`, `fig_x4_fmask_corr.png` |
 | Mô hình baseline mới đạt bao nhiêu? | Dice 0.2806, IoU 0.1955 | Đây là điểm chuẩn (baseline) để so sánh mọi thứ sau | Chắc chắn (train đủ) | `results/phase4_eval.json` |
 | Còn bao nhiêu "dư địa" để cải thiện? | Oracle đạt 0.331–0.370 (cao hơn baseline ~0.09) | Có khoảng trống thật, chủ yếu ở việc dọn vùng nền | Trung bình | `results/oracle_summary.json`, `results/confgated_summary.json` |
-| **Bỏ feedback hẳn có tốt hơn không? (Gate 0)** | Không-feedback Dice 0.3034 ≥ feedback 0.2806; **nhưng FP tăng +1.9pp**; p=0.36 (không ý nghĩa) | **Feedback là gánh nặng trên Dice** nhưng KHÔNG phải nguồn gốc lỗi vẽ thừa | Trung bình (1 seed) | `results/phase5_eval.json`, `results/phase5_stats_full.json` + hình `fig_p5_final_metrics.png` |
-| **Loss WSDice có dọn lỗi vẽ thừa? (Gate 1)** | FP 5.19% vs baseline 4.62% (không giảm) | **KHÔNG** — không giảm được FP | Trung bình (1 seed) | `results/phase5_eval.json` + `checkpoints_phase5/train_log_TA.csv` |
-| **Loss far-weighted (nặng nền)? (Gate 1)** | FP 0.05% nhưng **Dice sụp 0.0086** (mô hình đoán toàn nền) | **THẤT BẠI** — giảm FP vô nghĩa vì không còn dự đoán được polyp | Trung bình (1 seed; collapse rõ) | `results/phase5_eval.json` + hình `fig_p5_paired_delta_TB.png`, `fig_p5_train_curves.png` |
+| **Bỏ feedback hẳn có tốt hơn không? (Kiểm tra 1)** | Không-feedback Dice 0.3034 ≥ feedback 0.2806; **nhưng FP tăng +1.9pp**; p=0.36 (không ý nghĩa) | **Feedback là gánh nặng trên Dice** nhưng KHÔNG phải nguồn gốc lỗi vẽ thừa | Trung bình (1 seed) | `results/phase5_eval.json`, `results/phase5_stats_full.json` + hình `fig_p5_final_metrics.png` |
+| **Loss WSDice có dọn lỗi vẽ thừa? (Kiểm tra 2)** | FP 5.19% vs baseline 4.62% (không giảm) | **KHÔNG** — không giảm được FP | Trung bình (1 seed) | `results/phase5_eval.json` + `checkpoints_phase5/train_log_TA.csv` |
+| **Loss far-weighted (nặng nền)? (Kiểm tra 2)** | FP 0.05% nhưng **Dice sụp 0.0086** (mô hình đoán toàn nền) | **THẤT BẠI** — giảm FP vô nghĩa vì không còn dự đoán được polyp | Trung bình (1 seed; collapse rõ) | `results/phase5_eval.json` + hình `fig_p5_paired_delta_TB.png`, `fig_p5_train_curves.png` |
 
 > **Bản chất của cả hành trình:** dự án thử **5 hướng cải tiến** (confidence-gating,
 > dual-path, STE, WSDice, far-weighted) — **tất cả đều thất bại một cách trung thực**
@@ -346,10 +397,10 @@ quy trình quyết định 3 bậc (Gate 0/1):
 |---|---|---|---|
 | 1 | **Phân tích phủ định có hệ thống** | **Cao (đã đủ dữ liệu)** | Chỉ rõ **5 hướng cải tiến thất bại và vì sao** — đúng chuẩn "negative result" khoa học, vẫn publish được |
 | 2 | **Phát hiện chẩn đoán**: nhánh "tự học" của FANet là non-differentiable (không học được) | Cao | Phát hiện mới, có bằng chứng đo trực tiếp, giá trị cho cộng đồng tái hiện FANet |
-| 3 | **Phát hiện: soft-dice lúc train che giấu collapse** (TB) — bài học methodology | Cao | Phát hiện mới từ Phase 5; khuyến nghị theo dõi binary val-dice khi dùng loss-side |
+| 3 | **Phát hiện: soft-dice lúc train che giấu collapse** (mô hình far-weighted) — bài học methodology | Cao | Phát hiện mới từ Phase 5; khuyến nghị theo dõi binary val-dice khi dùng loss-side |
 | 4 | **Định vị dư địa** bằng oracle (84.6% nằm ở vùng vẽ thừa, xa biên 40.7px) | Cao | Phân tích hướng thiết kế, đã có dữ liệu |
 
-**Chiến lược (đã chốt sau Phase 5):** hướng loss-side **thất bại** (Gate 1 FAIL) →
+**Chiến lược (đã chốt sau Phase 5):** hướng loss-side **thất bại** (kiểm tra 2 không qua) →
 bài báo theo **negative-result chuẩn mực** (đóng góp 1+2+3+4): tổng hợp 5 hướng thất
 bại có kiểm soát + khung chẩn đoán/bug-tracking chặt chẽ — đủ để publish ở các venue
 chấp nhận reproducibility/negative-result.
@@ -370,8 +421,8 @@ chấp nhận reproducibility/negative-result.
 
 | Ưu tiên | Việc | Điều kiện |
 |---|---|---|
-| 1 | ✅ **Đã xong: thí nghiệm loss-side trên Kaggle** (3 mô hình × 200 vòng) | Đã chạy, Gate 1 FAIL |
-| 2 | ✅ **Đã xong: đánh giá quy trình 3 bậc** — (a) feedback là gánh nặng trên Dice nhưng không phải nguồn gốc FP; (b) loss mới không giảm FP (WSDice) hoặc sụp Dice (far-weighted); (c) **KHÔNG chạy multi-seed** vì Gate 1 fail | — |
+| 1 | ✅ **Đã xong: thí nghiệm loss-side trên Kaggle** (3 mô hình × 200 vòng) | Đã chạy, kiểm tra 2 không qua |
+| 2 | ✅ **Đã xong: đánh giá quy trình 3 bậc** — (a) feedback là gánh nặng trên Dice nhưng không phải nguồn gốc FP; (b) loss mới không giảm FP (WSDice) hoặc sụp Dice (far-weighted); (c) **KHÔNG chạy multi-seed** vì kiểm tra 2 không qua | — |
 | 3 | **Pivot sang negative-result paper**: tổng hợp 5 hướng thất bại có kiểm soát + khung phân tích/bug-tracking + stats chuẩn (Wilcoxon, effect size, CI, Bayes, sensitivity) | Chính là dữ liệu hiện có |
 | 4 | **Chẩn đoán vì sao FP "cứng đầu"** (BN stats, Otsu init, đặc thù split 156/40) — câu hỏi mở cho paper | Không tốn GPU |
 | 5 | Hoàn thiện bài báo (phân tích + tái lập + reproducibility appendix) | Song song |
@@ -379,11 +430,14 @@ chấp nhận reproducibility/negative-result.
 
 **Đã quyết định bỏ/hoãn:** hướng STE (đóng vĩnh viễn), hướng kênh nền tường minh
 (prior thấp), các loss chỉ chữa biên (không chữa đúng gốc rễ vẽ thừa vùng nền xa),
-**hướng loss-side FP penalty (WSDice/far-weighted) — Gate 1 FAIL, đóng sau Phase 5**.
+**hướng loss-side FP penalty (WSDice/far-weighted) — kiểm tra 2 không qua, đóng sau Phase 5**.
 
 ---
 
-## PHẦN G. Từ điển thuật ngữ (dành cho người mới)
+## PHẦN G. Từ điển thuật ngữ (chỉ tra khi gặp kí hiệu lạ)
+
+> Báo cáo này **cố gắng hạn chế kí hiệu** — chỉ dùng thuật ngữ thật cần thiết. Nếu gặp
+> từ lạ, tra bảng dưới đây:
 
 | Thuật ngữ | Nghĩa đơn giản |
 |---|---|
@@ -418,7 +472,7 @@ chấp nhận reproducibility/negative-result.
 > - **Báo cáo chi tiết từng giai đoạn:** `docs/reports/` (mở `README.md` để xem mục lục)
 > - **Biểu đồ bằng chứng (tất cả kết luận ở trên):** `kaggle/figures/` (fig1..fig5 = confidence/uncertainty,
 >   fig_abl_* = ablation 2×2, fig_p4_* = train end-to-end, fig_x4_* = chẩn đoán STE,
->   fig_p5_* = Phase 5 Gate 0/1)
+>   fig_p5_* = Phase 5 — 2 kiểm tra cuối)
 > - **Số liệu kết quả:** thư mục `results/` (JSON/CSV) — Phase 5: `phase5_eval.json`, `phase5_stats.json`, `phase5_stats_full.json`
 > - **Nhật ký chạy:** thư mục `logs/` + `kaggle/outputs_phase5/fanet-phase5.log`
 > - **Mô hình đã train:** thư mục `checkpoints/`, `checkpoints_phase4/`, `checkpoints_phase5/`
