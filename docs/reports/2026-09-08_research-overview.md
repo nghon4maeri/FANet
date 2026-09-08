@@ -73,12 +73,12 @@ Bộ phận làm việc này có tên **MixPool**: nó cắt tỉa feature theo 
 
 ### B.2. Ưu điểm của FANet
 
-| Ưu điểm | Giải thích đơn giản |
-|---|---|
-| Ý tưởng mới lạ | Hướng "tái dùng dự đoán cũ" là hiếm, mở ra cả một nhánh nghiên cứu |
-| Mô hình nhẹ | ~7.7 triệu tham số, chạy được cả trên CPU thường |
-| Có cơ chế tinh chỉnh lúc kiểm tra | Khi mô hình đã tốt, lặp lại vài lần giúp kết quả khớp hơn |
-| Được cộng đồng dùng làm điểm so sánh | Nhiều bài báo sau trích dẫn và so sánh với FANet |
+| Ưu điểm | Giải thích đơn giản | Bằng chứng (file) |
+|---|---|---|
+| Ý tưởng mới lạ | Hướng "tái dùng dự đoán cũ" là hiếm, mở ra cả một nhánh nghiên cứu | `docs/literature_grounding_next.md` (FANetv2, FEGNet trích dẫn) |
+| Mô hình nhẹ | ~7.7 triệu tham số, chạy được cả trên CPU thường | `logs/report_log.txt` (script `scripts/report.py`) |
+| Có cơ chế tinh chỉnh lúc kiểm tra | Khi mô hình đã tốt, lặp lại vài lần giúp kết quả khớp hơn | `results/test_results.csv` (checkpoint 53ep: F1 0.315→0.327) |
+| Được cộng đồng dùng làm điểm so sánh | Nhiều bài báo sau trích dẫn và so sánh với FANet | `docs/literature_grounding_next.md` (32 paper curated) |
 
 ### B.3. Hạn chế của FANet (đã được dự án kiểm chứng bằng dữ liệu)
 
@@ -88,14 +88,31 @@ Hai điểm yếu cấu trúc quan trọng nhất:
 **1. Nhánh "attention tự học" thực chất chưa bao giờ được học.**
 Trong MixPool có một nhánh nhỏ được quảng cáo là "tự học cách chú ý". Nhưng cách viết
 dùng phép so sánh cứng (`giá trị > 0.5`), và phép so sánh này **không cho đạo hàm** —
-nghĩa là mô hình **không thể học** từ nhánh đó. Bằng chứng: sau 53 vòng lặp, trọng số
-của nhánh này không đổi lấy một chút (sai lệch đo được là 0.0000). Nói cách khác,
-nhánh "thông minh" thực chất là **ngẫu nhiên**, mọi sức mạnh đến từ feedback mask.
+nghĩa là mô hình **không thể học** từ nhánh đó. Nói cách khác, nhánh "thông minh"
+thực chất là **ngẫu nhiên**, mọi sức mạnh đến từ feedback mask.
+
+**Bằng chứng (Hạn chế 1 — nhánh attention không học):**
+- `logs/analysis_grad_log.txt` (script `analysis/grad_flow.py`) → sau 10 steps training,
+  **0/160** tham số nhánh attention có gradient (nhánh conv bên cạnh đủ 160/160); trọng
+  số không đổi sau `optimizer.step()`; sau **53 vòng lặp**, BN affine sai lệch so khởi
+  tạo = **0.0000** (chỉ có thể xảy ra nếu nhánh chưa từng được update).
+
+![Tương quan nhánh attention với GT ≈ 0 — nhánh "tự học" không học được pattern nào](../../kaggle/figures/fig_x4_fmask_corr.png)
 
 **2. Feedback vứt bỏ thông tin quan trọng.**
 Feedback mask chỉ là ảnh đen-trắng (1/0), nên nó **vứt bỏ độ chắc chắn** (mô hình tự
 tin 99% hay chỉ 51% — bị đối xử như nhau) và **vứt bỏ cả vùng nền**. Hệ quả: khi mô
 hình **vẽ thừa** (over-segment), feedback sẽ **khuếch đại lỗi thừa đó** thay vì sửa.
+
+**Bằng chứng (Hạn chế 2 — feedback quá thô):**
+- `results/feedback_uncertainty_bins.csv`, `logs/feedback_analysis_log.txt` → pixel tin
+  <0.1 sai **48.7%**, pixel tin >0.35 chỉ sai **2.7%** — nhưng threshold 0.5 đối xử
+  hai loại này như nhau (hình dưới).
+- `results/oracle_summary.json` → feedback không chứa thông tin nền: **84.6%** dư địa
+  oracle nằm ở vùng model vẽ thừa; FP/FN = 2.48; FP cách biên 40.7px → feedback
+  khuếch đại lỗi vẽ thừa thay vì sửa.
+
+![Error rate theo confidence — vùng tự tin thấp sai nhiều nhưng vẫn bị đối xử như nhau](../../kaggle/figures/fig3_uncertainty_error.png)
 
 > **Một câu tóm tắt:** FANet có ý tưởng hay nhưng có **2 khiếm khuyết kỹ thuật** —
 > (1) cơ chế "tự học" chết ngay từ đầu, (2) feedback quá thô (bỏ độ chắc chắn và
