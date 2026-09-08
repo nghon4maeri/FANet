@@ -132,7 +132,9 @@ chỗ nào còn trống.
 
 ## PHẦN D. Hành trình nghiên cứu của dự án (kể theo trình tự)
 
-> Đây là phần kể chuyện — mỗi bước làm gì, tìm ra gì. Các con số nằm trong PHẦN E.
+> Đây là phần kể chuyện — mỗi bước làm gì, tìm ra gì. **Mỗi kết luận đều kèm
+> "Bằng chứng"** (biểu đồ + file số liệu) để bạn hoặc người phản biện có thể tự kiểm
+> chứng. Các con số được tóm tắt trong PHẦN E.
 
 ### D.1. Bước 0 — Chạy lại FANet (10/08/2026)
 
@@ -150,6 +152,17 @@ chỗ nào còn trống.
   không chắc chắn. Cụ thể: pixel mà mô hình tin < 0.1 có tỉ lệ sai **48.7%**, còn pixel
   tin > 0.35 chỉ sai **2.7%** — nhưng feedback đối xử hai loại này như nhau.
 
+**Bằng chứng (Điểm yếu 1 — nhánh attention không học được):**
+- `logs/analysis_grad_log.txt` → sau 10 steps: **0/160** tham số nhánh attention có
+  gradient; BN affine sai lệch so khởi tạo = **0.0000** sau 53 vòng. Script: `analysis/grad_flow.py`.
+
+**Bằng chứng (Điểm yếu 2 — feedback vứt độ chắc chắn):**
+
+![Error rate theo confidence — vùng tự tin thấp sai nhiều](../../kaggle/figures/fig3_uncertainty_error.png)
+
+- `results/feedback_uncertainty_bins.csv`, `logs/feedback_analysis_log.txt` → error rate
+  48.7% (conf < 0.1) vs 2.7% (conf > 0.35); FP tập trung ở vùng conf thấp.
+
 ### D.3. Bước 2 — Thử cải tiến theo hướng "feedback" (27/08 – 04/09/2026)
 
 Đặt ra 2 câu hỏi và **kiểm định bằng thí nghiệm**:
@@ -160,17 +173,49 @@ vẫn tốt nhất. Lý do sâu xa: vùng mô hình "không tự tin" chính là
 vừa là nơi dễ sai, vừa là nơi cần được hướng dẫn nhất. Cắt lỗi = cắt luôn thông tin
 hữu ích.
 
+**Bằng chứng (Thử nghiệm 1 — confidence-gating):**
+
+![Dice theo từng biến thể feedback — binary vẫn tốt nhất](../../kaggle/figures/fig1_variant_dice.png)
+
+![Help/hurt theo biến thể — cắt conf không chuyển hurt thành help](../../kaggle/figures/fig2_help_hurt.png)
+
+- `results/confgated_summary.json`, `logs/confgated_log.txt` → binary 0.2390 là cao
+  nhất; gated càng mạnh (tau càng cao) càng tệ; soft giúp nhiều case nhất (24) nhưng
+  mean delta thấp (+0.0118).
+
 **Thử nghiệm 2 — Dual-path (kênh nền tường minh):** "Nếu thêm thông tin nền vào
 feedback thì có dọn được lỗi vẽ thừa không?" → **Kết quả (đo trên mô hình cũ): KHÔNG.**
 Lỗi vẽ thừa còn **tăng** (+2.9 điểm phần trăm, p rất nhỏ). Khi train lại từ đầu,
 mô hình dual-path **không ổn định** (2 lần chạy đều xấu hơn hoặc sụp). → Hướng này
 không đáng đầu tư tiếp.
 
+**Bằng chứng (Thử nghiệm 2 — dual-path):**
+
+![Ablation 2×2 — FP tăng dù Dice tăng nhẹ](../../kaggle/figures/fig_abl_final_metrics.png)
+
+![Thống kê paired — FP +2.92pp (p=1e-7); Dice +0.030 (p=0.035, không qua Bonferroni)](../../kaggle/figures/fig_abl_stats.png)
+
+- `results/abl2x2_stats.json`, `logs/abl2x2_log.txt` → dual-path FP **+2.92pp**
+  (p=1.27e-7), negative control làm Dice sụp 0.239→0.083 (hiệu ứng là do thông tin
+  nền thật, không phải do "thêm kênh").
+
 **Thử nghiệm 3 — Hồi sinh nhánh attention:** "Nếu sửa phép so sánh cứng để nhánh
 attention học được thì sao?" → Kỹ thuật STE giúp gradient chảy được (điều kiện cần
 đạt). Nhưng **train lại: kết quả KÉM hơn** (Dice 0.195 so với 0.281 của baseline).
 Chẩn đoán sâu: STE không làm mô hình học được gì có ích (chỉ hơi học ở encoder, không
 ở decoder; làm phân phối của BatchNorm lệch nặng). → **Kết luận: đóng vĩnh viễn hướng này.**
+
+**Bằng chứng (Thử nghiệm 3 — STE):**
+
+![Train E2E: baseline binary (xanh) hội tụ tốt hơn STE (cam)](../../kaggle/figures/fig_p4_train_curves.png)
+
+![STE chỉ học yếu ở encoder, không ở decoder → pattern vô ích](../../kaggle/figures/fig_x4_fmask_corr.png)
+
+- `results/phase4_eval.json`, `results/phase4_stats.json` → baseline 0.2806 vs STE 0.1951
+  (delta −0.0855, p=0.277, 20/40 ảnh binary thắng).
+- `results/x4_ste_diagnosis.json` → STE gradient variance thấp hơn soft; fmask học yếu
+  (encoder corr ~0.2, decoder ~0); BatchNorm dịch chuyển mạnh (`d1.r1.bn1` mean_abs 18.8)
+  → đóng STE vĩnh viễn ("vô hại-vô dụng").
 
 ### D.4. Bước 3 — Tìm ra GỐC RỄ vấn đề (31/08/2026)
 
@@ -183,6 +228,15 @@ mô hình tự đoán" → biết mô hình đang thiếu thông tin gì.
 - **84.6%** chỗ khác nhau giữa hai loại feedback nằm ở vùng mô hình **vẽ thừa**.
 - Lỗi vẽ thừa nằm **xa biên polyp 40.7 pixel** (tràn sâu vào nền), lỗi vẽ thiếu chỉ
   **8.6 pixel** (sát biên).
+
+**Bằng chứng (Gốc rễ — oracle):**
+
+![Oracle gap ổn định qua iterations — dư địa thật nằm ở dọn vùng nền](../../kaggle/figures/fig_abl_oracle_gap.png)
+
+- `results/oracle_summary.json`, `results/oracle_analysis.csv`, `logs/oracle_analysis_log.txt`
+  → FP/FN = 2.48; 84.6% khác biệt ở vùng vẽ thừa; FP cách biên 40.7px, FN 8.6px;
+  oracle gap +0.093 ổn định.
+- Figures liên quan: `fig5_kept_fraction.png` (phần foreground giữ lại theo biến thể).
 
 > **Kết luận gốc rễ (root cause):** vấn đề chính của FANet là **vẽ thừa vùng nền**,
 > và cơ chế feedback hiện tại **không hề biết cách dọn vùng nền** vì nó chỉ biết đến
@@ -223,6 +277,19 @@ quy trình quyết định 3 bậc (Gate 0/1):
   GPU cho hướng loss-side.** Chuyển hướng sang viết **negative-result paper** + chẩn
   đoán vì sao FP "cứng đầu" (xem PHẦN F.3).
 
+**Bằng chứng (Phase 5 — Gate 0/1):**
+
+![Dice / FP / FN của 4 mô hình — T0N cao Dice, TB sụp hoàn toàn](../../kaggle/figures/fig_p5_final_metrics.png)
+
+![Phân phối delta Dice per-image — TB lệch hẳn về âm (collapse)](../../kaggle/figures/fig_p5_paired_delta_TB.png)
+
+- `results/phase5_eval.json`, `results/phase5_stats.json`, `results/phase5_stats_full.json`
+  → T0N Dice 0.3034 vs T00 0.2806 (p=.36, BF10=0.21 ủng hộ null, FP +1.91pp); TA FP 5.19%
+  (không giảm); TB Dice 0.0086 (recall 0.0047).
+- `checkpoints_phase5/train_log_*.csv` + `kaggle/figures/fig_p5_train_curves.png` →
+  TB soft-dice lúc train ~0.19 nhưng binary eval sụp → **soft-dice che giấu collapse**.
+- Kernel log: `kaggle/outputs_phase5/fanet-phase5.log` (200 epochs × 3 cells, seed 43).
+
 > **Tổng kết toàn hành trình:** 5 hướng cải tiến đã thử (confidence-gating, dual-path,
 > STE, WSDice, far-weighted) — **tất cả đều thất bại có kiểm soát**, mỗi cái có số liệu
 > và lý do rõ ràng. Giá trị khoa học nằm ở chính **khung phân tích negative-result
@@ -232,19 +299,19 @@ quy trình quyết định 3 bậc (Gate 0/1):
 
 ## PHẦN E. Kết quả chính (bảng tóm tắt — giải thích bằng lời)
 
-| Câu hỏi | Kết quả đo được | Nói bằng lời đơn giản | Độ tin cậy |
-|---|---|---|---|
-| Nhánh "tự học" của FANet có học không? | Sai lệch trọng số sau 53 vòng = 0.0000; 0/160 tham số có gradient | **KHÔNG học được gì** — chết ngay từ đầu | Chắc chắn (đo trực tiếp) |
-| Vùng không tự tin có lỗi cao không? | Pixel tin <0.1 sai 48.7%; tin >0.35 sai 2.7% | **Có** — độ chắc chắn dự báo được lỗi | Chắc chắn |
-| Cắt vùng không tự tin khỏi feedback giúp không? | Feedback nhị phân cũ tốt nhất (0.2390) | **KHÔNG giúp** — cắt lỗi = cắt luôn thông tin biên | Trung bình (đo trên mô hình cũ) |
-| Feedback dự đoán thiếu gì so với "đúng hoàn hảo"? | 84.6% khác biệt ở vùng vẽ thừa; vẽ thừa gấp 2.48 lần vẽ thiếu; xa biên 40.7px | **Thiếu hiểu biết về nền** — gốc rễ là vẽ thừa vùng nền xa | Chắc chắn (đo pixel) |
-| Thêm kênh nền vào feedback giúp không? | Lỗi vẽ thừa TĂNG +2.9pp (p=1e-7); train lại không ổn định | **KHÔNG giúp** | Trung bình |
-| Sửa nhánh attention (STE) giúp không? | Baseline 0.281 vs STE 0.195 | **KHÔNG giúp, còn kém** → đóng hướng | Trung bình (1 seed) |
-| Mô hình baseline mới đạt bao nhiêu? | Dice 0.2806, IoU 0.1955 | Đây là điểm chuẩn (baseline) để so sánh mọi thứ sau | Chắc chắn (train đủ) |
-| Còn bao nhiêu "dư địa" để cải thiện? | Oracle đạt 0.331–0.370 (cao hơn baseline ~0.09) | Có khoảng trống thật, chủ yếu ở việc dọn vùng nền | Trung bình |
-| **Bỏ feedback hẳn có tốt hơn không? (Gate 0)** | Không-feedback Dice 0.3034 ≥ feedback 0.2806; **nhưng FP tăng +1.9pp**; p=0.36 (không ý nghĩa) | **Feedback là gánh nặng trên Dice** nhưng KHÔNG phải nguồn gốc lỗi vẽ thừa | Trung bình (1 seed) |
-| **Loss WSDice có dọn lỗi vẽ thừa? (Gate 1)** | FP 5.19% vs baseline 4.62% (không giảm) | **KHÔNG** — không giảm được FP | Trung bình (1 seed) |
-| **Loss far-weighted (nặng nền)? (Gate 1)** | FP 0.05% nhưng **Dice sụp 0.0086** (mô hình đoán toàn nền) | **THẤT BẠI** — giảm FP vô nghĩa vì không còn dự đoán được polyp | Trung bình (1 seed; collapse rõ) |
+| Câu hỏi | Kết quả đo được | Nói bằng lời đơn giản | Độ tin cậy | Bằng chứng (file) |
+|---|---|---|---|---|
+| Nhánh "tự học" của FANet có học không? | Sai lệch trọng số sau 53 vòng = 0.0000; 0/160 tham số có gradient | **KHÔNG học được gì** — chết ngay từ đầu | Chắc chắn (đo trực tiếp) | `logs/analysis_grad_log.txt`, `analysis/grad_flow.py` |
+| Vùng không tự tin có lỗi cao không? | Pixel tin <0.1 sai 48.7%; tin >0.35 sai 2.7% | **Có** — độ chắc chắn dự báo được lỗi | Chắc chắn | `results/feedback_uncertainty_bins.csv` + hình `fig3_uncertainty_error.png` |
+| Cắt vùng không tự tin khỏi feedback giúp không? | Feedback nhị phân cũ tốt nhất (0.2390) | **KHÔNG giúp** — cắt lỗi = cắt luôn thông tin biên | Trung bình (đo trên mô hình cũ) | `results/confgated_summary.json` + hình `fig1_variant_dice.png`, `fig2_help_hurt.png` |
+| Feedback dự đoán thiếu gì so với "đúng hoàn hảo"? | 84.6% khác biệt ở vùng vẽ thừa; vẽ thừa gấp 2.48 lần vẽ thiếu; xa biên 40.7px | **Thiếu hiểu biết về nền** — gốc rễ là vẽ thừa vùng nền xa | Chắc chắn (đo pixel) | `results/oracle_summary.json` + hình `fig_abl_oracle_gap.png` |
+| Thêm kênh nền vào feedback giúp không? | Lỗi vẽ thừa TĂNG +2.9pp (p=1e-7); train lại không ổn định | **KHÔNG giúp** | Trung bình | `results/abl2x2_stats.json` + hình `fig_abl_final_metrics.png`, `fig_abl_stats.png` |
+| Sửa nhánh attention (STE) giúp không? | Baseline 0.281 vs STE 0.195 | **KHÔNG giúp, còn kém** → đóng hướng | Trung bình (1 seed) | `results/phase4_eval.json`, `results/x4_ste_diagnosis.json` + hình `fig_p4_train_curves.png`, `fig_x4_fmask_corr.png` |
+| Mô hình baseline mới đạt bao nhiêu? | Dice 0.2806, IoU 0.1955 | Đây là điểm chuẩn (baseline) để so sánh mọi thứ sau | Chắc chắn (train đủ) | `results/phase4_eval.json` |
+| Còn bao nhiêu "dư địa" để cải thiện? | Oracle đạt 0.331–0.370 (cao hơn baseline ~0.09) | Có khoảng trống thật, chủ yếu ở việc dọn vùng nền | Trung bình | `results/oracle_summary.json`, `results/confgated_summary.json` |
+| **Bỏ feedback hẳn có tốt hơn không? (Gate 0)** | Không-feedback Dice 0.3034 ≥ feedback 0.2806; **nhưng FP tăng +1.9pp**; p=0.36 (không ý nghĩa) | **Feedback là gánh nặng trên Dice** nhưng KHÔNG phải nguồn gốc lỗi vẽ thừa | Trung bình (1 seed) | `results/phase5_eval.json`, `results/phase5_stats_full.json` + hình `fig_p5_final_metrics.png` |
+| **Loss WSDice có dọn lỗi vẽ thừa? (Gate 1)** | FP 5.19% vs baseline 4.62% (không giảm) | **KHÔNG** — không giảm được FP | Trung bình (1 seed) | `results/phase5_eval.json` + `checkpoints_phase5/train_log_TA.csv` |
+| **Loss far-weighted (nặng nền)? (Gate 1)** | FP 0.05% nhưng **Dice sụp 0.0086** (mô hình đoán toàn nền) | **THẤT BẠI** — giảm FP vô nghĩa vì không còn dự đoán được polyp | Trung bình (1 seed; collapse rõ) | `results/phase5_eval.json` + hình `fig_p5_paired_delta_TB.png`, `fig_p5_train_curves.png` |
 
 > **Bản chất của cả hành trình:** dự án thử **5 hướng cải tiến** (confidence-gating,
 > dual-path, STE, WSDice, far-weighted) — **tất cả đều thất bại một cách trung thực**
@@ -332,6 +399,9 @@ chấp nhận reproducibility/negative-result.
 > - **Tài liệu mô tả kiến trúc FANet:** `docs/FANet_Complete_Guide.md`
 > - **Danh sách bài báo liên quan (32 bài):** `docs/literature_grounding_next.md`
 > - **Báo cáo chi tiết từng giai đoạn:** `docs/reports/` (mở `README.md` để xem mục lục)
+> - **Biểu đồ bằng chứng (tất cả kết luận ở trên):** `kaggle/figures/` (fig1..fig5 = confidence/uncertainty,
+>   fig_abl_* = ablation 2×2, fig_p4_* = train end-to-end, fig_x4_* = chẩn đoán STE,
+>   fig_p5_* = Phase 5 Gate 0/1)
 > - **Số liệu kết quả:** thư mục `results/` (JSON/CSV) — Phase 5: `phase5_eval.json`, `phase5_stats.json`, `phase5_stats_full.json`
 > - **Nhật ký chạy:** thư mục `logs/` + `kaggle/outputs_phase5/fanet-phase5.log`
 > - **Mô hình đã train:** thư mục `checkpoints/`, `checkpoints_phase4/`, `checkpoints_phase5/`
