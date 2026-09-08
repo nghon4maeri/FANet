@@ -13,6 +13,11 @@ checkpoints/
 results/
 *.pth
 
+# Phase 5 artifacts (explicitly tracked for reproducibility)
+!checkpoints_phase5/*.pth
+!kaggle/outputs_phase5/checkpoints_phase5/*.pth
+!kaggle/outputs_phase5/fanet-phase5.log
+
 # Notebooks (keep cell outputs out of git)
 notebooks/.ipynb_checkpoints/
 
@@ -39,5 +44,7 @@ papers/original/*.pdf
 *.bin
 .cache/
 *.log
+# Phase 5 kernel log (explicitly tracked)
+!kaggle/outputs_phase5/fanet-phase5.log
 # Machine-local config
 .env
