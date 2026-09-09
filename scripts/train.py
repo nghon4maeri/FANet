@@ -66,6 +66,10 @@ def evaluate(model, loader, mask, loss_fn, device, size, dual_path=False,
              no_feedback=False):
     epoch_loss = 0
     return_mask = []
+    bin_dice = 0.0
+    bin_prec = 0.0
+    bin_rec = 0.0
+    bin_fpr = 0.0
 
     model.eval()
     with torch.no_grad():
@@ -88,13 +92,28 @@ def evaluate(model, loader, mask, loss_fn, device, size, dual_path=False,
             epoch_loss += loss.item()
 
             y_pred = torch.sigmoid(y_pred).cpu().numpy()
-            for py in y_pred:
+            for py, gy in zip(y_pred, y.cpu().numpy()):
                 py = np.squeeze(py, axis=0)
                 py = py > 0.5
                 py = np.array(py, dtype=np.uint8)
                 return_mask.append(rle_encode(py))
 
-    return epoch_loss / len(loader), return_mask
+                gb = (np.squeeze(gy, axis=0) > 0.5).astype(np.uint8)
+                pb = (py > 0).astype(np.uint8)
+                tp = (pb & gb).sum()
+                pred_pos = pb.sum(); gt_pos = gb.sum()
+                fp = (pb & (1 - gb)).sum()
+                bin_dice += 2.0 * tp / (pred_pos + gt_pos + 1e-15)
+                bin_prec += tp / (pred_pos + 1e-15)
+                bin_rec += tp / (gt_pos + 1e-15)
+                bin_fpr += fp / (gb.size + 1e-15)
+
+    n = len(loader.dataset)
+    bin_metrics = {
+        "bin_dice": bin_dice / n, "bin_prec": bin_prec / n,
+        "bin_rec": bin_rec / n, "bin_fpr": bin_fpr / n,
+    }
+    return epoch_loss / len(loader), return_mask, bin_metrics
 
 
 def main():
@@ -110,8 +129,8 @@ def main():
     parser.add_argument("--epochs", type=int, default=None,
                         help="override num epochs (smoke test)")
     parser.add_argument("--loss", type=str, default="dicebce",
-                        choices=["dicebce", "negdice", "cella", "farwiou"],
-                        help="loss: dicebce | negdice | cella (IoU+BCE+WSDice) | farwiou (far-weighted)")
+                        choices=["dicebce", "negdice", "cella", "farwiou", "tversky"],
+                        help="loss: dicebce | negdice | cella (IoU+BCE+WSDice) | farwiou (far-weighted) | tversky (asym FP-heavy)")
     parser.add_argument("--no-feedback", action="store_true",
                         help="T0N: feed zero mask (no Otsu init, no cross-epoch feedback loop)")
     parser.add_argument("--seed", type=int, default=None,
@@ -187,6 +206,10 @@ def main():
         from fanet.losses import FarWeightedIoUBCELoss
         loss_fn = FarWeightedIoUBCELoss(gamma=5.0)
         loss_name = "Cell B: far-weighted wIoU+wBCE (1+5(1-mu))"
+    elif args.loss == "tversky":
+        from fanet.losses import Phase6AsymmetricBCELoss
+        loss_fn = Phase6AsymmetricBCELoss(alpha=0.7, beta=0.3, lam=0.5)
+        loss_name = "Phase6 asym: 0.5*DiceBCE + 0.5*Tversky(alpha=0.7, beta=0.3)"
     else:
         loss_fn = DiceBCELoss()
         loss_name = "BCE Dice Loss"
@@ -206,7 +229,7 @@ def main():
         train_loss, return_train_mask = train(
             model, train_loader, train_mask, optimizer, loss_fn, device, size, dual_path,
             no_feedback)
-        valid_loss, return_valid_mask = evaluate(
+        valid_loss, return_valid_mask, bin_metrics = evaluate(
             model, valid_loader, valid_mask, loss_fn, device, size, dual_path,
             no_feedback)
         scheduler.step(valid_loss)
@@ -225,6 +248,7 @@ def main():
         data_str = f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s\n'
         data_str += f'\tTrain Loss: {train_loss:.3f}\n'
         data_str += f'\t Val. Loss: {valid_loss:.3f}\n'
+        data_str += f'\t Bin Val-Dice: {bin_metrics["bin_dice"]:.4f} | Prec: {bin_metrics["bin_prec"]:.4f} | Rec: {bin_metrics["bin_rec"]:.4f} | FPR: {bin_metrics["bin_fpr"]:.4f}\n'
         print_and_save(train_log_path, data_str)
 
 

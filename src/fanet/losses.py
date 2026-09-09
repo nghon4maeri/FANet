@@ -181,6 +181,52 @@ class Phase5CellALoss(nn.Module):
         return self.iou_bce(inputs, targets) + self.lambda_w * self.wsdice(inputs, targets)
 
 
+class TverskyLoss(nn.Module):
+    """Asymmetric Tversky loss (FP-heavy) for false-positive suppression.
+
+    Faithful to Salehi et al. (MICCAI-MLMI 2017), Tversky index:
+        TI = |PG| / (|PG| + alpha*|P\\G| + beta*|G\\P|),   loss = 1 - TI
+    alpha penalizes false positives, beta penalizes false negatives.
+    alpha=beta=0.5 recovers Dice; alpha+beta=1 recovers F_beta.
+
+    Phase 6 cell TC/TD (advisor feedback #2: asymmetric loss for FP reduction):
+    alpha=0.7, beta=0.3 -> FP (over-prediction) penalized ~2.3x harder than FN.
+    Intended to be combined with DiceBCE as lambda*DiceBCE + (1-lambda)*Tversky
+    (Phase6AsymmetricBCELoss), mirroring the Cell-A / Unified-Focal pattern.
+    """
+    def __init__(self, alpha=0.7, beta=0.3, smooth=1.0):
+        super().__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.smooth = smooth
+
+    def forward(self, inputs, targets):
+        p = torch.sigmoid(inputs).view(-1)
+        g = targets.view(-1)
+        tp = (p * g).sum()
+        fp = (p * (1 - g)).sum()
+        fn = ((1 - p) * g).sum()
+        tversky = (tp + self.smooth) / (tp + self.alpha * fp + self.beta * fn + self.smooth)
+        return 1.0 - tversky
+
+
+class Phase6AsymmetricBCELoss(nn.Module):
+    """Phase 6 cell: lambda*DiceBCE + (1-lambda)*Tversky(alpha=0.7, beta=0.3).
+
+    Combines the balanced DiceBCE backbone (keeps Dice level stable) with an
+    FP-heavy Tversky term to suppress over-prediction without the collapse risk
+    of far-weighted cell B (Phase 5 TB). lambda=0.5 default (Unified-Focal-style).
+    """
+    def __init__(self, alpha=0.7, beta=0.3, lam=0.5, smooth=1.0):
+        super().__init__()
+        self.lam = lam
+        self.dice_bce = DiceBCELoss()
+        self.tversky = TverskyLoss(alpha=alpha, beta=beta, smooth=smooth)
+
+    def forward(self, inputs, targets):
+        return self.lam * self.dice_bce(inputs, targets) + (1.0 - self.lam) * self.tversky(inputs, targets)
+
+
 class FarWeightedIoUBCELoss(nn.Module):
     """Cell B: wIoU+wBCE with FAR-from-boundary pixel importance weight.
 
