@@ -25,8 +25,12 @@ user duyệt plan.
 - [x] Bước 2: audit — map feedback vào bằng chứng Phase 5 (bảng 2×2 + memo trả lời advisor bên dưới)
 - [x] Bước 3: literature grounding đa nguồn → `docs/literature_grounding_phase6.md` (ASL, Tversky, Focal Tversky, Unified Focal, ENet, Cui 2019, Kvasir-SEG, Metrics Reloaded — DOI verify)
 - [x] Bước 4: pre-registration plan (report này, CHƯA chạy GPU)
-- [ ] Bước 5: implement losses + CLI + eval-log + smoke-test CPU + notebook phase6 (SAU khi user duyệt plan)
-- [ ] Bước 6: user submit Kaggle → eval/stats/report (SAU này)
+- [x] **User chốt thiết kế:** Phương án B (tái dùng T0N/T00) · Tversky α=0.7/β=0.3 · chỉ asymmetric trước (không chạy class-frequency song song)
+- [x] Bước 5: implement `TverskyLoss` + `Phase6AsymmetricBCELoss` (losses.py) + CLI `--loss tversky` + binary val-metric logging (train.py) → `f14107a` (commit `e85ce3b`)
+- [x] Bước 5: smoke-test CPU 1 epoch 2 cells (TC: 0.851/0.827, binDice 0.2222; TD: 0.842/1.141, binDice 0.2294) + sanity gradient (finite-diff FP/FN penalty ratio 2.308 ≈ α/β)
+- [x] Bước 5: tạo `notebooks/fanet_kaggle_phase6.py` + `kaggle/fanet-phase6.ipynb` (18 cells, log binary val-metrics mỗi epoch, diverge rule ep40) → commit `f14107a`
+- [ ] **CHỜ USER SUBMIT KAGGLE** `kaggle/fanet-phase6.ipynb` (2 cells TC/TD × 200ep, seed 43)
+- [ ] Bước 6: download → eval/stats/report (SAU khi có kết quả)
 
 ---
 
@@ -169,25 +173,23 @@ loss-side khó; rủi ro chạy lại "sạch" mà vẫn fail → tốn GPU vô 
 
 | ID | Giả thuyết | Config | Kết quả (dự kiến) | Link |
 |----|-----------|--------|-------------------|------|
-| TC | FB × asymmetric (Tversky α>β) giảm FP, giữ Dice | seed 43, 200ep | Chờ chạy | `src/fanet/losses.py`, `notebooks/fanet_kaggle_phase6.py` |
-| TD | no-FB × asymmetric giảm FP, giữ Dice | seed 43, 200ep | Chờ chạy | ditto |
-| (tùy chọn) TE/TF | FB/no-FB × class-frequency (ENet-bounded) | seed 43 | Chờ chạy | ditto |
-| Smoke test | CPU 1 epoch mọi cell mới | — | loss-scale + sanity gradient | `logs/` |
+| Smoke TC | FB × asymmetric (Tversky α>β) chạy được | seed 43, 1 epoch CPU | ✅ 0.851/0.827, binDice 0.2222 | `scripts/train.py` |
+| Smoke TD | no-FB × asymmetric chạy được | seed 43, 1 epoch CPU | ✅ 0.842/1.141, binDice 0.2294 | `scripts/train.py` |
+| Sanity grad | Tversky đẩy FP xuống + FP/FN asymmetric | finite-difference | ✅ FP down / FN up; FP/FN ratio 2.308 ≈ α/β | `src/fanet/losses.py` |
+| TC | FB × asymmetric giảm FP, giữ Dice (vs T00) | seed 43, 200ep | Chờ user submit Kaggle | `kaggle/fanet-phase6.ipynb` |
+| TD | no-FB × asymmetric giảm FP, giữ Dice (vs T0N) | seed 43, 200ep | Chờ user submit Kaggle | ditto |
+| (tùy chọn) TE/TF | FB/no-FB × class-frequency (ENet-bounded) | seed 43 | **Hoãn** (user chốt chỉ asymmetric trước) | — |
 
-> **CHỜ USER DUYỆT** phương án (A vs B) + chốt loss asymmetric (Tversky α/β) và có
-> chạy class-frequency cell hay không, trước khi tốn GPU.
+> **CHỜ USER SUBMIT KAGGLE** `kaggle/fanet-phase6.ipynb` (2 cells TC/TD × 200ep, seed 43).
 
 ## Will Do (On going)
 
-- [ ] **Chờ user duyệt plan** (phương án A/B + chốt loss).
-- [ ] Implement losses (asymmetric + class-frequency) vào `src/fanet/losses.py`; script
-      tính class-frequency từ TRAIN split → JSON vào `configs/`.
-- [ ] Mở rộng `scripts/train.py` CLI (`--loss tversky|cwfreq`, `--no-feedback`,
-      `--seed`, `--class-weight` path) + eval-log binary Precision/Recall/FPR.
-- [ ] Smoke test CPU 1 epoch mọi cell mới (loss-scale + sanity gradient đẩy FP xuống).
-- [ ] Tạo `notebooks/fanet_kaggle_phase6.py` + `kaggle/fanet-phase6.ipynb` (log binary
-      val-metrics mỗi epoch). DỪNG, xin user submit Kaggle.
-- [ ] Sau khi user submit: eval/stats/report Phase 6 (Bước 6).
+- [x] **User duyệt plan** (phương án B + Tversky α=0.7/β=0.3 + chỉ asymmetric) — ✅ ĐÃ CHỐT
+- [x] Implement losses (asymmetric Tversky) vào `src/fanet/losses.py`; CLI + eval-log binary metrics
+- [x] Smoke test CPU 1 epoch mọi cell mới (loss-scale + sanity gradient đẩy FP xuống)
+- [x] Tạo `notebooks/fanet_kaggle_phase6.py` + `kaggle/fanet-phase6.ipynb` (log binary val-metrics mỗi epoch)
+- [ ] **User submit Kaggle** `kaggle/fanet-phase6.ipynb` (2 cells TC/TD, seed 43, ~3.5h×2)
+- [ ] Sau khi user submit: download → `analysis/phase6_eval.py` + `phase6_stats_full.py` + `phase6_figures.py` → report Phase 6 (Bước 6)
 
 ## Any Stuck / Open Questions
 
