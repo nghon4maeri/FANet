@@ -29,8 +29,8 @@ user duyệt plan.
 - [x] Bước 5: implement `TverskyLoss` + `Phase6AsymmetricBCELoss` (losses.py) + CLI `--loss tversky` + binary val-metric logging (train.py) → `f14107a` (commit `e85ce3b`)
 - [x] Bước 5: smoke-test CPU 1 epoch 2 cells (TC: 0.851/0.827, binDice 0.2222; TD: 0.842/1.141, binDice 0.2294) + sanity gradient (finite-diff FP/FN penalty ratio 2.308 ≈ α/β)
 - [x] Bước 5: tạo `notebooks/fanet_kaggle_phase6.py` + `kaggle/fanet-phase6.ipynb` (18 cells, log binary val-metrics mỗi epoch, diverge rule ep40) → commit `f14107a`
-- [ ] **CHỜ USER SUBMIT KAGGLE** `kaggle/fanet-phase6.ipynb` (2 cells TC/TD × 200ep, seed 43)
-- [ ] Bước 6: download → eval/stats/report (SAU khi có kết quả)
+- [x] **User submit Kaggle** `kaggle/fanet-phase6.ipynb` (2 cells TC/TD × 200ep, seed 43) → kernel COMPLETE (09/09 07:20)
+- [x] Bước 6: download → eval/stats/figures → report **`docs/reports/2026-09-09_phase6-results.md`** (TD PASS −3.25pp FP; TC FAIL; interaction +4.17pp)
 
 ---
 
